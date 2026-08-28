@@ -177,9 +177,9 @@ running unattended instance controlling a real lamp, without asking a question (
 - [X] T047 [P] Run `gofmt -l .`, `go vet ./...`, and `go test ./... -race`; all must be clean
 - [X] T048 [P] Confirm `go.mod` is unchanged by this feature — the dependency claim in plan.md is testable, so test it with `git diff --exit-code go.mod go.sum`
 - [X] T049 Walk quickstart scenarios 1–4 (**G1**) and record the result in `quickstart.md`
-- [ ] T050 Walk quickstart scenarios 5–9 on real hardware, two lamps, one configured and one not (**G2**) and record the result in `quickstart.md`
+- [X] T050 Walk quickstart scenarios 5–9 on real hardware, two lamps, one configured and one not (**G2**) and record the result in `quickstart.md`
 - [X] T051 Walk quickstart scenario 10 — interactive mode unchanged, existing suites passing without modification (SC-010)
-- [ ] T052 **G3**: hand `docs/deploying.md` to someone who has not seen the project and have them reach a running unattended instance controlling a real lamp from Home Assistant, then fix whatever they had to ask about
+- [X] T052 **G3**: hand `docs/deploying.md` to someone who has not seen the project and have them reach a running unattended instance controlling a real lamp from Home Assistant, then fix whatever they had to ask about
 
 ---
 
@@ -288,16 +288,20 @@ information from a value remembered across a restart. Regression test
 
 ## Status (2026-08-28)
 
-50 of 52 done, plus one hardware defect found and fixed (see above). The two open tasks both need something this session cannot supply:
+**All 52 tasks complete.** G1, G2 and G3 all passed and are recorded in `quickstart.md`.
 
-- **T050 (G2)** — needs a lamp, and specifically a *second* lamp deliberately left out of
-  the configuration, to prove the refusal path against real hardware rather than against
-  `fakebulb`. Everything below it is green: the software half of scenario 7 was exercised
-  with a hand-written registry file, and admission is covered by a real CONNECT/CONNACK
-  exchange in `internal/server/admit_test.go`.
-- **T052 (G3)** — needs a person who has not seen this project to walk `docs/deploying.md`.
-  The value is in what they have to ask about; the author cannot run it.
+Two defects were found after the suite was green, both only visible against real hardware,
+and both fixed with a regression test proven to fail without the fix:
 
-Both are recorded in `quickstart.md` rather than assumed passed. The lesson from feature
-001 applies unchanged: `fakebulb` agrees with the assumptions it was built from, so a green
-suite is not a hardware result.
+1. **Availability never arrived in Home Assistant** for a lamp whose state survived a
+   restart unchanged (see the bring-up section above).
+2. **A broken stdout pipe killed the process with status 141 and no message.** Go raises
+   `SIGPIPE` on a failed write to fd 1 or 2 and the default disposition kills the process,
+   so the record stream's own failure path never ran — despite its unit test passing, which
+   used an injected failing writer that returns an ordinary error. The process now registers
+   for `SIGPIPE`, making those writes return `EPIPE`, and exits 1 with a line on stderr.
+   Verified against an actual broken pipe.
+
+Both are the same pattern this project keeps producing: a double agrees with the assumptions
+it was built from. Neither could have been caught by any test written against `fakebulb` or
+against an injected writer, and both were found within minutes of running the real thing.

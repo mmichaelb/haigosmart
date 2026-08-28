@@ -128,15 +128,15 @@ chmod a-w /tmp/hg && kill -TERM <pid>  # read-only registry
 directory read-only: one `saving the registry failed` at WARN, later attempts at DEBUG, the
 instance keeps serving throughout and still exits 0.
 
-**G2** — scenarios 5–9 green on real hardware. **Not yet run**: needs a lamp, and
-scenario 6 needs a second lamp that is deliberately left out of the configuration.
+**G2** — scenarios 5–9 green on real hardware. **Passed 2026-08-28**, against two lamps
+(`703e975dc388`, `703e975dfd56`) with Home Assistant and a real broker.
 
-Scenario 7's software half was exercised on 2026-08-28 with a hand-written registry file
-holding two lamps and a configuration naming one: the named lamp was renamed to its
-configured name, the other was reported once as `registry lamp not configured` and left on
-disk. The hardware half — that the unconfigured lamp is actually refused when it connects —
-is covered by `internal/server/admit_test.go` through a real CONNECT/CONNACK exchange, and
-remains to be confirmed against the physical lamp.
+Scenario 8 failed on the first attempt and found the one defect this feature introduced: a
+lamp that reconnected reporting exactly its persisted state produced no `StateChanged`
+event, so the bridge never marked it available and Home Assistant showed it unavailable
+forever. Fixed in `internal/server/session.go` — the first report of each connection is
+published even when nothing changed — with regression test
+`TestReconnectReportsStateEvenWhenNothingChanged`, confirmed to fail without the fix.
 
 ## Scenario 10 — Interactive mode is untouched (SC-010)
 
@@ -158,3 +158,4 @@ same wording, adoption included.
 **G3** — the documentation gate: someone who has not seen this project follows
 [docs/deploying.md](../../docs/deploying.md) end to end and reaches a running unattended
 instance controlling a real lamp from Home Assistant, without asking a question (SC-007).
+**Passed 2026-08-28.**
