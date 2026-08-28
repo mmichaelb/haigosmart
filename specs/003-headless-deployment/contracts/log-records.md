@@ -90,9 +90,16 @@ that formats the real value (FR-014, SC-006).
 | Interactive, no `-log` | A temp file — never the terminal, which the interface is drawing |
 | Interactive, `-log` given | That file |
 
-A failed write to the record stream terminates the process: one line on standard error and a
-non-zero exit. An unattended instance whose output goes nowhere is not running, and the
+A failed write to the record stream terminates the process: one line on standard error and
+exit status 1. An unattended instance whose output goes nowhere is not running, and the
 restart decision belongs to whatever supervises it.
+
+This needs one deliberate piece of setup. Go's runtime raises `SIGPIPE` when a write to file
+descriptor 1 or 2 hits a broken pipe, and the default disposition kills the process —
+status 141, nothing on standard error, no explanation for whoever finds the dead container.
+The process therefore registers for `SIGPIPE`, which makes those writes return `EPIPE`
+instead, so the failure reaches the code that can describe it. Verified against a real
+broken pipe, not only in the unit test.
 
 ## Level
 

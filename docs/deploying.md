@@ -206,8 +206,26 @@ configured, also `home assistant integration enabled`.
 ### When the output goes nowhere
 
 If the record stream cannot be written — a closed pipe, a full disk — the server
-prints one line to standard error and exits non-zero. An unattended server nobody
-can hear is not running, and restarting it is the supervisor's decision.
+prints one line to standard error and exits 1:
+
+```text
+haigosmart: cannot write the record stream: write /dev/stdout: broken pipe
+```
+
+An unattended server nobody can hear is not running, and restarting it is the
+supervisor's decision.
+
+## Exit codes
+
+| Code | Meaning |
+|---|---|
+| `0` | Clean shutdown. `SIGTERM` or `SIGINT`: stops accepting connections, records `shutting down` with the signal, saves the registry, exits. Takes tens of milliseconds, so any sane grace period is ample |
+| `1` | Refused to start (an invalid setting, a port already in use, an unreadable registry), or the record stream failed while running. The reason is on standard error in every case |
+
+`SIGTERM` is the signal Kubernetes sends first, and it is handled. A second `SIGTERM` during
+shutdown is *not* a force-quit — the handler stays installed — which is harmless, because the
+supervisor's own `SIGKILL` after the grace period is the escalation, and it always works.
+Shutdown is fast enough that it never gets that far.
 
 ---
 

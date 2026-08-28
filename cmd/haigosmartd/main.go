@@ -49,6 +49,13 @@ func run() error {
 		return err
 	}
 
+	// Go's runtime raises SIGPIPE when a write to fd 1 or 2 hits a broken pipe,
+	// and the default disposition kills the process: status 141, nothing on
+	// stderr, no explanation for whoever finds the dead container. Registering
+	// for the signal makes those writes return EPIPE instead, so the record
+	// stream's own failure path reports what happened and exits 1.
+	signal.Notify(make(chan os.Signal, 1), syscall.SIGPIPE)
+
 	logFile, logger, err := newLogger(cfg.LogPath, cfg.Headless, cfg.Verbose, start)
 	if err != nil {
 		return err
