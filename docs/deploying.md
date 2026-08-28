@@ -26,10 +26,30 @@ DNAT rule. Nothing on the bulb changes. Details and alternatives are in
 
 ### 2. Run interactively
 
+Install it, download it, or build it — any of the three:
+
+```bash
+go install github.com/mmichaelb/haigosmart/cmd/haigosmartd@latest
+```
+
+```bash
+# from https://github.com/mmichaelb/haigosmart/releases/latest
+tar -xzf haigosmart_*_linux_amd64.tar.gz
+sha256sum -c checksums.txt --ignore-missing
+```
+
 ```bash
 go build -o haigosmartd ./cmd/haigosmartd
+```
+
+Then:
+
+```bash
 ./haigosmartd
 ```
+
+The container is not an option here: adoption needs a terminal, and the image
+runs headless.
 
 ### 3. Adopt each lamp and write down its device id
 
@@ -96,6 +116,28 @@ else has a working default.
 ```bash
 ./haigosmartd
 ```
+
+Or run the container, which is the same server with the same settings:
+
+```bash
+docker run -d --name haigosmart \
+  -p 1883:1883 \
+  -v haigosmart-data:/data \
+  -e HAIGOSMART_LAMPS="703e975dc388=kitchen,e5f6a7b8c9d0=desk" \
+  -e TZ=Europe/Berlin \
+  ghcr.io/mmichaelb/haigosmart:latest
+```
+
+The image bakes `HAIGOSMART_HEADLESS=true` and `HAIGOSMART_REGISTRY=/data/registry.json`
+and nothing else — every setting in the table below works exactly as it does for
+the binary. Details in [releasing.md](releasing.md); the short version:
+
+- **`/data`** holds the registry and the self-signed TLS key. Both are caches, so
+  running without the volume works — you get one `saving the registry failed`
+  warning and lose only the last-known state across restarts.
+- **`TZ`** is honoured; without it, records are UTC.
+- **There is no shell in the image.** `docker exec` gives you nothing, by design.
+  The records on standard output are the diagnosis.
 
 No flags. Every setting came from the environment, and the records go to
 standard output:
@@ -219,7 +261,7 @@ supervisor's decision.
 
 | Code | Meaning |
 |---|---|
-| `0` | Clean shutdown. `SIGTERM` or `SIGINT`: stops accepting connections, records `shutting down` with the signal, saves the registry, exits. Takes tens of milliseconds, so any sane grace period is ample |
+| `0` | Clean shutdown. `SIGTERM` or `SIGINT` — the signal `docker stop` and Kubernetes send first: stops accepting connections, records `shutting down` with the signal, saves the registry, exits. Takes tens of milliseconds, so any sane grace period is ample |
 | `1` | Refused to start (an invalid setting, a port already in use, an unreadable registry), or the record stream failed while running. The reason is on standard error in every case |
 
 `SIGTERM` is the signal Kubernetes sends first, and it is handled. A second `SIGTERM` during

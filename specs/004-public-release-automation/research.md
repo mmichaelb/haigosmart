@@ -42,6 +42,40 @@ from every artefact, and nobody installing or running haigosmart ever sees it.
 | **GoReleaser alone, on manually pushed tags** | Simplest by far, and rejected only because "the releases should happen automatically" is the feature. A human choosing a version number is the thing being removed |
 | **A hand-written version script** | Reading conventional commits and computing a semver bump is not hard, but it is a parser of a specification someone else maintains. Writing one to avoid a dependency that lives only in CI is the wrong trade |
 
+### Deviation: installed locally, not run through npx
+
+semantic-release's own documentation recommends the opposite of what this repository does:
+
+> We recommend running **semantic-release** directly in the CI environment with npx […] we
+> recommend against installing it as a local dependency of your project.
+
+This project installs it — `package.json`, `package-lock.json`, `npm ci` — and the reason is
+the tradeoff the same documentation names: *"the full semantic-release dependency graph is not
+pinned by your project's lockfile"* when run through npx.
+
+That matters here more than it would in most repositories, because the release job holds
+`contents: write` and `packages: write`. Under npx, roughly 218 packages resolve fresh from the
+registry on every release, executing with those tokens, and a release can change behaviour or
+break with no commit to this repository — the same silent-failure class this feature is built
+to avoid everywhere else. The lockfile also earned its place immediately: it is how the 42
+high-severity advisories in the initially pinned version were found, before a release rather
+than after one.
+
+The documentation's advice is aimed at JavaScript packages, where semantic-release publishes
+the very package it is a dependency of. That self-reference does not exist in a Go repository:
+nothing here is published to npm, and `.releaserc.json` declares an explicit `plugins` array,
+so the default `@semantic-release/npm` plugin never loads.
+
+**The costs, stated rather than buried**: three files in a Go repository that are not Go, a
+language breakdown on GitHub that will show JavaScript, and one more Dependabot ecosystem to
+review.
+
+**Revisit trigger**: if the npm dependency graph becomes a maintenance burden, the documented
+form is a small deletion — remove `package.json`, `package-lock.json`, the npm Dependabot
+entry, and the `node_modules` ignore line, then run
+`npx --package semantic-release@25 --package @semantic-release/exec@7 semantic-release`. Direct
+versions stay pinned; only the transitive graph floats.
+
 **Constitution note**: the additional-constraints clause requires justifying new third-party
 dependencies. None of these are Go dependencies — `go.mod` and `go.sum` are unchanged apart
 from the module line, and that is verified by `git diff` rather than asserted.

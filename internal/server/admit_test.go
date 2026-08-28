@@ -10,9 +10,9 @@ import (
 	"testing"
 	"time"
 
-	"haigosmart/internal/bulb/fakebulb"
-	"haigosmart/internal/events"
-	"haigosmart/internal/registry"
+	"github.com/mmichaelb/haigosmart/internal/bulb/fakebulb"
+	"github.com/mmichaelb/haigosmart/internal/events"
+	"github.com/mmichaelb/haigosmart/internal/registry"
 )
 
 // admitHarness is newHarness with an admission predicate and a clock the test

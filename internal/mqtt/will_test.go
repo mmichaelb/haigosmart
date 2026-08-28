@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"haigosmart/internal/mqtt/mqtttest"
+	"github.com/mmichaelb/haigosmart/internal/mqtt/mqtttest"
 )
 
 // The last will is the only mechanism that reports a crash or a pulled cable.

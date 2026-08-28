@@ -13,9 +13,9 @@ import (
 	"sync"
 	"time"
 
-	"haigosmart/internal/bulb"
-	"haigosmart/internal/events"
-	"haigosmart/internal/protocol"
+	"github.com/mmichaelb/haigosmart/internal/bulb"
+	"github.com/mmichaelb/haigosmart/internal/events"
+	"github.com/mmichaelb/haigosmart/internal/protocol"
 )
 
 // pendingCommand is one in-flight command awaiting confirmation from the bulb.

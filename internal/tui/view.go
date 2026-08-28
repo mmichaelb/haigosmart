@@ -6,7 +6,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 
-	"haigosmart/internal/bulb"
+	"github.com/mmichaelb/haigosmart/internal/bulb"
 )
 
 var (

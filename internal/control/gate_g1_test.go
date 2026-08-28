@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"haigosmart/internal/bulb"
-	"haigosmart/internal/bulb/fakebulb"
+	"github.com/mmichaelb/haigosmart/internal/bulb"
+	"github.com/mmichaelb/haigosmart/internal/bulb/fakebulb"
 )
 
 // Gate G1. The refactor moved the logic into internal/lights; the terminal's

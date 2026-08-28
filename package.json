@@ -1,0 +1,12 @@
+{
+  "name": "haigosmart-release",
+  "private": true,
+  "description": "Release tooling only. This is a Go project; nothing here is imported by the program or shipped in any artefact.",
+  "license": "GPL-3.0-or-later",
+  "devDependencies": {
+    "@semantic-release/commit-analyzer": "13.0.1",
+    "@semantic-release/exec": "7.1.0",
+    "@semantic-release/release-notes-generator": "14.1.1",
+    "semantic-release": "25.0.9"
+  }
+}

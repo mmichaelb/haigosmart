@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"strings"
 
-	"haigosmart/internal/bulb"
+	"github.com/mmichaelb/haigosmart/internal/bulb"
 )
 
 // DecodeOTAVersion extracts the firmware version the bulb reports on

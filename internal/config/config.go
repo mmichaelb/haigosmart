@@ -19,9 +19,9 @@ import (
 	"strings"
 	"time"
 
-	"haigosmart/internal/control"
-	"haigosmart/internal/registry"
-	"haigosmart/internal/server"
+	"github.com/mmichaelb/haigosmart/internal/control"
+	"github.com/mmichaelb/haigosmart/internal/registry"
+	"github.com/mmichaelb/haigosmart/internal/server"
 )
 
 // EnvPrefix is the prefix of every environment variable this program reads.

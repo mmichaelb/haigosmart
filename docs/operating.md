@@ -16,9 +16,14 @@ one is generated — nothing breaks.
 Then run the server on port 1883:
 
 ```bash
-go build -o haigosmartd ./cmd/haigosmartd
-./haigosmartd
+go install github.com/mmichaelb/haigosmart/cmd/haigosmartd@latest   # or build from a clone
+haigosmartd
 ```
+
+A prebuilt binary for your platform is also on the
+[latest release](https://github.com/mmichaelb/haigosmart/releases/latest), and
+the unattended server is available as a container — see
+[deploying.md](deploying.md).
 
 Port 1883 is below 1024 on some systems' reckoning — it is not, so no privileges
 are needed. If something else holds the port, `-listen` moves it, but then the

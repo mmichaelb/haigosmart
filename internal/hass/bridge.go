@@ -7,10 +7,10 @@ import (
 	"sync"
 	"time"
 
-	"haigosmart/internal/bulb"
-	"haigosmart/internal/events"
-	"haigosmart/internal/lights"
-	"haigosmart/internal/mqtt"
+	"github.com/mmichaelb/haigosmart/internal/bulb"
+	"github.com/mmichaelb/haigosmart/internal/events"
+	"github.com/mmichaelb/haigosmart/internal/lights"
+	"github.com/mmichaelb/haigosmart/internal/mqtt"
 )
 
 // Bridge publishes the lamps to Home Assistant and applies commands coming back.

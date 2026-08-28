@@ -1,6 +1,6 @@
 package hass
 
-import "haigosmart/internal/bulb"
+import "github.com/mmichaelb/haigosmart/internal/bulb"
 
 // Home Assistant colour modes. A light entity declares which of these it
 // supports, and Home Assistant renders exactly those controls and no others.

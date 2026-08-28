@@ -23,7 +23,7 @@ terminal from controlling a lamp.
 ## Turning it on
 
 ```bash
-./haigosmartd -mqtt-broker 192.168.1.10:1883 -mqtt-username ha -mqtt-password '…'
+haigosmartd -mqtt-broker 192.168.1.10:1883 -mqtt-username ha -mqtt-password '…'
 ```
 
 Leave `-mqtt-broker` unset and nothing changes: the server behaves exactly as it

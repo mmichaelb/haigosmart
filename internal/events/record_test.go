@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"haigosmart/internal/bulb"
+	"github.com/mmichaelb/haigosmart/internal/bulb"
 )
 
 // distinctDetail is deliberately unmistakable: the assertions below check it

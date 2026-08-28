@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"haigosmart/internal/bulb"
+	"github.com/mmichaelb/haigosmart/internal/bulb"
 )
 
 // statePayload is what Home Assistant reads to know a lamp's condition. It is

@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"haigosmart/internal/bulb"
+	"github.com/mmichaelb/haigosmart/internal/bulb"
 )
 
 func quietBus() *Bus { return NewBus(slog.New(slog.NewTextHandler(io.Discard, nil))) }

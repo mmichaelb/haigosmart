@@ -7,12 +7,12 @@ import (
 	"testing"
 	"time"
 
-	"haigosmart/internal/bulb"
-	"haigosmart/internal/events"
-	"haigosmart/internal/lights"
-	"haigosmart/internal/mqtt"
-	"haigosmart/internal/mqtt/mqtttest"
-	"haigosmart/internal/registry"
+	"github.com/mmichaelb/haigosmart/internal/bulb"
+	"github.com/mmichaelb/haigosmart/internal/events"
+	"github.com/mmichaelb/haigosmart/internal/lights"
+	"github.com/mmichaelb/haigosmart/internal/mqtt"
+	"github.com/mmichaelb/haigosmart/internal/mqtt/mqtttest"
+	"github.com/mmichaelb/haigosmart/internal/registry"
 )
 
 // Starting the bridge against a registry full of persisted state must publish

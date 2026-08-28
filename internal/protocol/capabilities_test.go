@@ -5,7 +5,7 @@ import (
 	"bytes"
 	"testing"
 
-	"haigosmart/internal/bulb"
+	"github.com/mmichaelb/haigosmart/internal/bulb"
 )
 
 func TestCapabilitiesFromVersion(t *testing.T) {

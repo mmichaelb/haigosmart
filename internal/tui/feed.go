@@ -3,8 +3,8 @@ package tui
 import (
 	"strings"
 
-	"haigosmart/internal/control"
-	"haigosmart/internal/events"
+	"github.com/mmichaelb/haigosmart/internal/control"
+	"github.com/mmichaelb/haigosmart/internal/events"
 )
 
 // feed is a bounded scrollback of rendered lines, newest at the bottom.

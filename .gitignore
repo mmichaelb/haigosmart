@@ -4,6 +4,10 @@
 *.test
 *.out
 
+# release tooling (GoReleaser output, semantic-release dependencies)
+/dist/
+/node_modules/
+
 # captures are local evidence, never committed (see captures/.gitignore)
 *.mitm
 *.pcap

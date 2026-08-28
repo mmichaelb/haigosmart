@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"haigosmart/internal/bulb"
+	"github.com/mmichaelb/haigosmart/internal/bulb"
 )
 
 // Kind classifies an event.

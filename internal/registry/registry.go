@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"haigosmart/internal/bulb"
+	"github.com/mmichaelb/haigosmart/internal/bulb"
 )
 
 // Registry is the in-memory set of bulbs, safe for concurrent use.

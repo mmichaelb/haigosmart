@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"haigosmart/internal/bulb"
+	"github.com/mmichaelb/haigosmart/internal/bulb"
 )
 
 // FileVersion is the schema version of the registry file. An unknown version is

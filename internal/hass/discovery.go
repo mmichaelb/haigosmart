@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"haigosmart/internal/bulb"
+	"github.com/mmichaelb/haigosmart/internal/bulb"
 )
 
 // discoveryPayload is the Home Assistant MQTT light discovery config. The JSON

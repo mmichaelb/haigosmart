@@ -11,8 +11,8 @@ import (
 	"sync"
 	"time"
 
-	"haigosmart/internal/events"
-	"haigosmart/internal/registry"
+	"github.com/mmichaelb/haigosmart/internal/events"
+	"github.com/mmichaelb/haigosmart/internal/registry"
 )
 
 // DefaultAddr is the listen address. Port 1883 is where the bulbs already send

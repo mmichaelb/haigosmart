@@ -11,14 +11,14 @@ import (
 // Bubble Tea into it — and would also make the Home Assistant bridge depend on
 // the terminal it is meant to be a sibling of.
 func TestLightsImportsNoFrontEnd(t *testing.T) {
-	out, err := exec.Command("go", "list", "-deps", "haigosmart/internal/lights").Output()
+	out, err := exec.Command("go", "list", "-deps", "github.com/mmichaelb/haigosmart/internal/lights").Output()
 	if err != nil {
 		t.Fatalf("go list: %v", err)
 	}
 	forbidden := []string{
-		"haigosmart/internal/control",
-		"haigosmart/internal/tui",
-		"haigosmart/internal/hass",
+		"github.com/mmichaelb/haigosmart/internal/control",
+		"github.com/mmichaelb/haigosmart/internal/tui",
+		"github.com/mmichaelb/haigosmart/internal/hass",
 		"github.com/charmbracelet",
 	}
 	for _, dep := range strings.Fields(string(out)) {

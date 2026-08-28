@@ -10,9 +10,9 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 
-	"haigosmart/internal/control"
-	"haigosmart/internal/events"
-	"haigosmart/internal/registry"
+	"github.com/mmichaelb/haigosmart/internal/control"
+	"github.com/mmichaelb/haigosmart/internal/events"
+	"github.com/mmichaelb/haigosmart/internal/registry"
 )
 
 // feedCapacity is how many lines the feed keeps. Older lines scroll away from

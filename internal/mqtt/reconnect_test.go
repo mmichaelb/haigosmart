@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"haigosmart/internal/mqtt/mqtttest"
+	"github.com/mmichaelb/haigosmart/internal/mqtt/mqtttest"
 )
 
 // A broker outage must be a temporary condition, not a permanent one. The lamps

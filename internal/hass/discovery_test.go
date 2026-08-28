@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"haigosmart/internal/bulb"
+	"github.com/mmichaelb/haigosmart/internal/bulb"
 )
 
 // cctLamp is the captured hardware: white-only, warmth-capable.

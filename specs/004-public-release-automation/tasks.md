@@ -36,9 +36,9 @@ Single Go module at the repository root. New infrastructure lives at the root or
 changes. Every task here is a measurement, not an edit — if one of them fails, the plan is
 wrong and the rest of the feature is built on a false premise.
 
-- [ ] T001 Verify the full git history carries no credential, capture, or private key (FR-005, SC-010): `git log --all --pretty=format: --name-only --diff-filter=A | sort -u | grep -Ei 'key|pem|crt|pcap|secret|token'` and inspect every hit. Record the result in this file's Status section
-- [ ] T002 [P] Record the baseline: `go test ./... -race -count=1` green, `gofmt -l .` empty, `go vet ./...` clean. This is what "no test was modified" (SC-002) is compared against
-- [ ] T003 [P] Confirm all six targets cross-compile today with `CGO_ENABLED=0` for `linux/amd64`, `linux/arm64`, `darwin/amd64`, `darwin/arm64`, `windows/amd64`, `windows/arm64`. All six passed during planning; a failure here means something changed since
+- [X] T001 Verify the full git history carries no credential, capture, or private key (FR-005, SC-010): `git log --all --pretty=format: --name-only --diff-filter=A | sort -u | grep -Ei 'key|pem|crt|pcap|secret|token'` and inspect every hit. Record the result in this file's Status section
+- [X] T002 [P] Record the baseline: `go test ./... -race -count=1` green, `gofmt -l .` empty, `go vet ./...` clean. This is what "no test was modified" (SC-002) is compared against
+- [X] T003 [P] Confirm all six targets cross-compile today with `CGO_ENABLED=0` for `linux/amd64`, `linux/arm64`, `darwin/amd64`, `darwin/arm64`, `windows/amd64`, `windows/arm64`. All six passed during planning; a failure here means something changed since
 
 **Checkpoint**: the starting state is measured, so every later claim can be checked rather than asserted.
 
@@ -53,11 +53,11 @@ just wrote. Doing it first makes it one mechanical change verified by the compil
 
 **⚠️ CRITICAL**: No other phase may begin until this one is complete and green.
 
-- [ ] T004 Change the module line in `go.mod` to `module github.com/mmichaelb/haigosmart`
-- [ ] T005 Rewrite every import of `haigosmart/internal/...` to `github.com/mmichaelb/haigosmart/internal/...` across `cmd/` and `internal/`, e.g. `grep -rl '"haigosmart/' --include='*.go' . | xargs sed -i '' 's|"haigosmart/|"github.com/mmichaelb/haigosmart/|g'`, then `gofmt -w` the touched files
-- [ ] T006 Verify the rewrite is complete: `grep -rn '"haigosmart/' --include='*.go' .` returns nothing, and `go build ./... && go vet ./...` are clean. A missed reference cannot resolve to something unexpected — it fails to build, which is why this rewrite needs no test
-- [ ] T007 Verify nothing else moved: `go test ./... -race -count=1` is green, and `git diff -- '*_test.go'` shows only import lines. SC-002 forbids editing a test to accommodate the rename — this is the check, and if a test needed changing, stop and find out why
-- [ ] T008 Verify `git diff go.mod go.sum` shows only the module line — no dependency was added or bumped, which is the constitution's dependency constraint held to (plan.md, Additional Constraints)
+- [X] T004 Change the module line in `go.mod` to `module github.com/mmichaelb/haigosmart`
+- [X] T005 Rewrite every import of `haigosmart/internal/...` to `github.com/mmichaelb/haigosmart/internal/...` across `cmd/` and `internal/`, e.g. `grep -rl '"haigosmart/' --include='*.go' . | xargs sed -i '' 's|"haigosmart/|"github.com/mmichaelb/haigosmart/|g'`, then `gofmt -w` the touched files
+- [X] T006 Verify the rewrite is complete: `grep -rn '"haigosmart/' --include='*.go' .` returns nothing, and `go build ./... && go vet ./...` are clean. A missed reference cannot resolve to something unexpected — it fails to build, which is why this rewrite needs no test
+- [X] T007 Verify nothing else moved: `go test ./... -race -count=1` is green, and `git diff -- '*_test.go'` shows only import lines. SC-002 forbids editing a test to accommodate the rename — this is the check, and if a test needed changing, stop and find out why
+- [X] T008 Verify `git diff go.mod go.sum` shows only the module line — no dependency was added or bumped, which is the constitution's dependency constraint held to (plan.md, Additional Constraints)
 
 **Checkpoint**: the module answers to its public name, the suite is green, and no test moved.
 
@@ -72,10 +72,10 @@ they are permitted to do with it.
 path and get a working binary; open the repository and find the licence.
 [quickstart.md](quickstart.md) scenario 1.
 
-- [ ] T009 [P] [US1] Add the full GPL-3.0 text to `LICENSE` at the repository root, unmodified from the canonical text (FR-004)
-- [ ] T010 [P] [US1] Add the GPL-3.0 notice to `README.md` and state the canonical module path `github.com/mmichaelb/haigosmart` (FR-006)
-- [ ] T011 [US1] Add `go install github.com/mmichaelb/haigosmart/cmd/haigosmartd@latest` to `README.md` as the primary install path (FR-002, SC-001)
-- [ ] T012 [US1] Run quickstart scenario 1 end to end and record the result
+- [X] T009 [P] [US1] Add the full GPL-3.0 text to `LICENSE` at the repository root, unmodified from the canonical text (FR-004)
+- [X] T010 [P] [US1] Add the GPL-3.0 notice to `README.md` and state the canonical module path `github.com/mmichaelb/haigosmart` (FR-006)
+- [X] T011 [US1] Add `go install github.com/mmichaelb/haigosmart/cmd/haigosmartd@latest` to `README.md` as the primary install path (FR-002, SC-001)
+- [ ] T012 [US1] Run quickstart scenario 1 end to end and record the result. **Blocked until T045**: the offline half passes (module line, no stale imports, suite green, six targets, canonical-path build inside the module), but `go install github.com/mmichaelb/haigosmart/...@latest` resolves through the proxy and cannot succeed until the repository is public
 
 **Checkpoint** — **G1 (part)**: the project is identifiable, licensed, and installable by name.
 
@@ -89,11 +89,11 @@ and a failure blocks the merge.
 **Independent Test**: Open a pull request with a misformatted file, watch it fail and block;
 fix it, watch it pass. [quickstart.md](quickstart.md) scenario 5.
 
-- [ ] T013 [US2] Extend `.github/workflows/ci.yml` to trigger explicitly on `pull_request` and on `push` to the main branch, replacing the bare `on: [push, pull_request]` (FR-007)
-- [ ] T014 [US2] Make the format step name the offending files rather than only exiting non-zero, so a failure is actionable without reproducing it locally (FR-010)
-- [ ] T015 [US2] Add a cross-compile job to `.github/workflows/ci.yml` building all six targets with `CGO_ENABLED=0`. This is the only check that catches a change working on the maintainer's macOS ARM machine while breaking the Windows or Linux artefact — and it catches it at pull-request time rather than mid-release (data-model.md, Check run)
-- [ ] T016 [US2] Set explicit least-privilege `permissions: contents: read` on the CI workflow, so a fork's pull request reaches no credential (FR-009)
-- [ ] T017 [P] [US2] Add `.github/dependabot.yml` covering `github-actions` and `gomod`, so the actions this feature depends on stay current without anyone remembering to look
+- [X] T013 [US2] Extend `.github/workflows/ci.yml` to trigger explicitly on `pull_request` and on `push` to the main branch, replacing the bare `on: [push, pull_request]` (FR-007)
+- [X] T014 [US2] Make the format step name the offending files rather than only exiting non-zero, so a failure is actionable without reproducing it locally (FR-010)
+- [X] T015 [US2] Add a cross-compile job to `.github/workflows/ci.yml` building all six targets with `CGO_ENABLED=0`. This is the only check that catches a change working on the maintainer's macOS ARM machine while breaking the Windows or Linux artefact — and it catches it at pull-request time rather than mid-release (data-model.md, Check run)
+- [X] T016 [US2] Set explicit least-privilege `permissions: contents: read` on the CI workflow, so a fork's pull request reaches no credential (FR-009)
+- [X] T017 [P] [US2] Add `.github/dependabot.yml` covering `github-actions` and `gomod`, so the actions this feature depends on stay current without anyone remembering to look
 
 **Checkpoint**: no unchecked change can merge. **G2** is provable once the repository is on GitHub.
 
@@ -108,13 +108,13 @@ human action — and a non-releasable one produces nothing at all.
 history ending in `feat:`, and reports nothing to release on one ending in `docs:`.
 [quickstart.md](quickstart.md) scenario 3. No GitHub needed for the dry run.
 
-- [ ] T018 [US3] Add `.releaserc.json` with `commit-analyzer`, `release-notes-generator`, and `exec`, branch `main`. Do **not** add `@semantic-release/github` — GoReleaser owns the release, and two tools creating it is the conflict [research.md §1](research.md) exists to avoid
-- [ ] T019 [US3] Set the `exec` plugin's `publishCmd` to `goreleaser release --clean`. This placement is the design: it runs only when a release was decided, so FR-014 needs no conditional anywhere (research.md §2)
-- [ ] T020 [US3] Create `.github/workflows/release.yml` triggering on `push` to the main branch, with `concurrency: {group: release, cancel-in-progress: false}` and `permissions: {contents: write, packages: write}`
-- [ ] T021 [US3] In `release.yml`, check out with `fetch-depth: 0` so the analyser can read history back to the previous tag. Without this it sees a shallow clone and decides wrongly
-- [ ] T022 [US3] In `release.yml`, add the comment explaining why semantic-release and GoReleaser share one job: a tag pushed by the run's own token does not start another workflow, so splitting this into two workflows breaks releases **silently**. This comment is the only thing protecting the design from a future tidy-up (research.md §2)
-- [ ] T023 [US3] Add `package.json` pinning the semantic-release version and its three plugins, so a release is not built against whatever npm resolves that day
-- [ ] T024 [US3] Verify both directions with `npx semantic-release --dry-run --no-ci`: a `feat:` commit names the next minor; a `docs:`-only history reports nothing to release (FR-012, FR-014, SC-009)
+- [X] T018 [US3] Add `.releaserc.json` with `commit-analyzer`, `release-notes-generator`, and `exec`, branch `main`. Do **not** add `@semantic-release/github` — GoReleaser owns the release, and two tools creating it is the conflict [research.md §1](research.md) exists to avoid
+- [X] T019 [US3] Set the `exec` plugin's `publishCmd` to `goreleaser release --clean`. This placement is the design: it runs only when a release was decided, so FR-014 needs no conditional anywhere (research.md §2)
+- [X] T020 [US3] Create `.github/workflows/release.yml` triggering on `push` to the main branch, with `concurrency: {group: release, cancel-in-progress: false}` and `permissions: {contents: write, packages: write}`
+- [X] T021 [US3] In `release.yml`, check out with `fetch-depth: 0` so the analyser can read history back to the previous tag. Without this it sees a shallow clone and decides wrongly
+- [X] T022 [US3] In `release.yml`, add the comment explaining why semantic-release and GoReleaser share one job: a tag pushed by the run's own token does not start another workflow, so splitting this into two workflows breaks releases **silently**. This comment is the only thing protecting the design from a future tidy-up (research.md §2)
+- [X] T023 [US3] Add `package.json` pinning the semantic-release version and its three plugins, so a release is not built against whatever npm resolves that day
+- [X] T024 [US3] Verify both directions with `npx semantic-release --dry-run --no-ci`: a `feat:` commit names the next minor; a `docs:`-only history reports nothing to release (FR-012, FR-014, SC-009)
 
 **Checkpoint**: the version decision is correct in both directions. Nothing is published yet.
 
@@ -130,19 +130,19 @@ the extracted binary prints the snapshot version. [quickstart.md](quickstart.md)
 
 ### Tests for User Story 4
 
-- [ ] T025 [P] [US4] Write `cmd/haigosmartd/version_test.go` asserting that `-version` prints the stamped version and exits zero, and that an unstamped build reports `dev` rather than a fabricated number. Confirm it fails before T026
+- [X] T025 [P] [US4] Write `cmd/haigosmartd/version_test.go` asserting that `-version` prints the stamped version and exits zero, and that an unstamped build reports `dev` rather than a fabricated number. Confirm it fails before T026
 
 ### Implementation for User Story 4
 
-- [ ] T026 [US4] Add `var version = "dev"` to `cmd/haigosmartd/main.go` and handle `-version` **before** `config.Load`, so a binary can identify itself while misconfigured — which is when the question is actually asked (contracts/release-artifacts.md)
-- [ ] T027 [US4] Add the version as an attribute on the `starting` record in `cmd/haigosmartd/main.go`. For an unattended server the log is where "which build is this?" gets asked
-- [ ] T028 [US4] Create `.goreleaser.yaml` with `version: 2`, a `builds` entry for `./cmd/haigosmartd`, `env: [CGO_ENABLED=0]`, goos `linux, darwin, windows`, goarch `amd64, arm64`
-- [ ] T029 [US4] Add build flags `-trimpath`, `-tags timetzdata`, and `-ldflags "-s -w -X main.version={{.Version}}"`. The `timetzdata` tag is not optional polish: without it a container operator setting `TZ` gets UTC timestamps that look perfectly well-formed (research.md §5)
-- [ ] T030 [US4] Configure `archives` as `tar.gz` with a `zip` override for Windows, including `README.md` and `LICENSE` in each — GPL-3.0 requires the terms travel with the binary (contracts/release-artifacts.md)
-- [ ] T031 [US4] Configure `checksum` as a single `checksums.txt` in `sha256sum -c` format (FR-019)
-- [ ] T032 [US4] Configure `release` in `.goreleaser.yaml` with `draft: true` and a conventional-commit `changelog`. The draft is how FR-026 is met; the changelog is FR-013
-- [ ] T033 [US4] Verify with `goreleaser check` and `goreleaser release --snapshot --clean`: six archives, `checksums.txt`, each archive holding the binary plus `README.md` and `LICENSE`, the Windows archive holding `haigosmartd.exe`
-- [ ] T034 [US4] Verify the stamped version reached the artefact: extract the linux/amd64 binary and run `-version`, expecting the snapshot version rather than `dev` (FR-020, FR-021)
+- [X] T026 [US4] Add `var version = "dev"` to `cmd/haigosmartd/main.go` and handle `-version` **before** `config.Load`, so a binary can identify itself while misconfigured — which is when the question is actually asked (contracts/release-artifacts.md)
+- [X] T027 [US4] Add the version as an attribute on the `starting` record in `cmd/haigosmartd/main.go`. For an unattended server the log is where "which build is this?" gets asked
+- [X] T028 [US4] Create `.goreleaser.yaml` with `version: 2`, a `builds` entry for `./cmd/haigosmartd`, `env: [CGO_ENABLED=0]`, goos `linux, darwin, windows`, goarch `amd64, arm64`
+- [X] T029 [US4] Add build flags `-trimpath`, `-tags timetzdata`, and `-ldflags "-s -w -X main.version={{.Version}}"`. The `timetzdata` tag is not optional polish: without it a container operator setting `TZ` gets UTC timestamps that look perfectly well-formed (research.md §5)
+- [X] T030 [US4] Configure `archives` as `tar.gz` with a `zip` override for Windows, including `README.md` and `LICENSE` in each — GPL-3.0 requires the terms travel with the binary (contracts/release-artifacts.md)
+- [X] T031 [US4] Configure `checksum` as a single `checksums.txt` in `sha256sum -c` format (FR-019)
+- [X] T032 [US4] Configure `release` in `.goreleaser.yaml` with `draft: true` and a conventional-commit `changelog`. The draft is how FR-026 is met; the changelog is FR-013
+- [X] T033 [US4] Verify with `goreleaser check` and `goreleaser release --snapshot --clean`: six archives, `checksums.txt`, each archive holding the binary plus `README.md` and `LICENSE`, the Windows archive holding `haigosmartd.exe`
+- [X] T034 [US4] Verify the stamped version reached the artefact: extract the linux/amd64 binary and run `-version`, expecting the snapshot version rather than `dev` (FR-020, FR-021)
 
 **Checkpoint**: the full binary set builds locally and identifies itself.
 
@@ -155,12 +155,13 @@ the extracted binary prints the snapshot version. [quickstart.md](quickstart.md)
 **Independent Test**: build locally, run with feature 003's environment variables, get feature
 003's records. [quickstart.md](quickstart.md) scenario 4.
 
-- [ ] T035 [P] [US5] Add `.dockerignore` excluding everything but the built binary — GoReleaser supplies it, so the build context needs nothing else
-- [ ] T036 [US5] Create `Dockerfile`: `FROM scratch`, one `COPY` of the binary to `/haigosmartd`, `ENTRYPOINT ["/haigosmartd"]`, `USER 65534:65534`, `EXPOSE 1883`, `VOLUME /data`
-- [ ] T037 [US5] Bake `ENV HAIGOSMART_HEADLESS=true` and `ENV HAIGOSMART_REGISTRY=/data/registry.json` into the `Dockerfile`. The second is not a convenience: the default path resolves through `os.UserConfigDir`, which fails in `scratch`, and the fallback is a relative path in an unwritable root — the server would warn on every save forever while otherwise working (research.md §5)
-- [ ] T038 [US5] Add a `dockers_v2` block to `.goreleaser.yaml` with `images: [ghcr.io/mmichaelb/haigosmart]`, `platforms: [linux/amd64, linux/arm64]`, and tags for the version, major.minor, major, and `latest` (FR-022, FR-023)
-- [ ] T039 [US5] Add OCI labels (`org.opencontainers.image.source`, `.licenses`, `.version`) so the image links back to the repository and declares GPL-3.0
-- [ ] T040 [US5] In `.github/workflows/release.yml`, add QEMU and Buildx setup plus a GHCR login using the run's own token — no stored registry credential exists, and that is deliberate (FR-009, research.md §8)
+- [X] T035 [P] [US5] Add `.dockerignore` excluding everything but the built binary — GoReleaser supplies it, so the build context needs nothing else
+- [X] T036 [US5] Create `Dockerfile`: `FROM scratch`, one `COPY` of the binary to `/haigosmartd`, `ENTRYPOINT ["/haigosmartd"]`, `USER 65534:65534`, `EXPOSE 1883`, `VOLUME /data`
+- [X] T037 [US5] Bake `ENV HAIGOSMART_HEADLESS=true` and `ENV HAIGOSMART_REGISTRY=/data/registry.json` into the `Dockerfile`. The second is not a convenience: the default path resolves through `os.UserConfigDir`, which fails in `scratch`, and the fallback is a relative path in an unwritable root — the server would warn on every save forever while otherwise working (research.md §5)
+- [X] T038 [US5] Add a `dockers_v2` block to `.goreleaser.yaml` with `images: [ghcr.io/mmichaelb/haigosmart]`, `platforms: [linux/amd64, linux/arm64]`, and tags for the version, major.minor, major, and `latest` (FR-022, FR-023)
+- [X] T039 [US5] Add OCI labels (`org.opencontainers.image.source`, `.licenses`, `.version`) so the image links back to the repository and declares GPL-3.0
+- [X] T040 [US5] In `.github/workflows/release.yml`, add QEMU and Buildx setup plus a GHCR login using the run's own token — no stored registry credential exists, and that is deliberate (FR-009, research.md §8)
+- [X] T062 Add the verify-then-undraft step to `.github/workflows/release.yml`: confirm the image manifest resolves for `linux/amd64` and `linux/arm64` and that the release carries seven assets, then clear the draft flag. **Added during implementation** — T032 sets `draft: true` but no task created the step that acts on it, so FR-026 had a mechanism with nothing driving it
 - [ ] T041 [US5] Verify locally with a Docker daemon running: `goreleaser release --snapshot --clean` builds both architectures; `docker image inspect` reports **one** layer and user `65534`. More than one layer means something beyond the binary got in
 - [ ] T042 [US5] Verify behaviour against feature 003 (FR-024): run the image with `HAIGOSMART_LAMPS` set, confirm JSON records with the same fields, confirm `docker stop` exits 0 within a second rather than waiting out the grace period
 - [ ] T043 [US5] Verify the time zone fix: run with `TZ=Europe/Berlin` and confirm the record timestamps are Berlin local, not UTC. This is the check that fails silently if T029's build tag is ever dropped
@@ -191,11 +192,11 @@ project's history, so these tasks are deliberately separate and deliberately slo
 
 ## Phase 9: Documentation & Polish
 
-- [ ] T055 [P] [US6] Rewrite `README.md`: what the project is, the canonical name, the three ways to get it (install, download, pull), and the licence (FR-027)
-- [ ] T056 [P] [US6] Add `.github/CONTRIBUTING.md` covering the commit convention, what the checks enforce, and — the part people miss — that a squash merge means the **pull request title** is what the analyser reads (FR-028, contracts/commit-messages.md)
-- [ ] T057 [P] [US6] Add `docs/releasing.md`: how the pipeline works, why the two tools share one job, how to intervene when a release fails, and the honest cost of `scratch` — there is no shell, so `docker exec` gives you nothing and diagnosis is the record stream
-- [ ] T058 [US6] Update `docs/deploying.md` so its instructions match what is published: download and container paths alongside the locally built binary, and the container's `/data` volume (FR-029)
-- [ ] T059 [P] [US6] Update `docs/homeassistant.md` and `docs/operating.md` for any changed install or run instructions
+- [X] T055 [P] [US6] Rewrite `README.md`: what the project is, the canonical name, the three ways to get it (install, download, pull), and the licence (FR-027)
+- [X] T056 [P] [US6] Add `.github/CONTRIBUTING.md` covering the commit convention, what the checks enforce, and — the part people miss — that a squash merge means the **pull request title** is what the analyser reads (FR-028, contracts/commit-messages.md)
+- [X] T057 [P] [US6] Add `docs/releasing.md`: how the pipeline works, why the two tools share one job, how to intervene when a release fails, and the honest cost of `scratch` — there is no shell, so `docker exec` gives you nothing and diagnosis is the record stream
+- [X] T058 [US6] Update `docs/deploying.md` so its instructions match what is published: download and container paths alongside the locally built binary, and the container's `/data` volume (FR-029)
+- [X] T059 [P] [US6] Update `docs/homeassistant.md` and `docs/operating.md` for any changed install or run instructions
 - [ ] T060 [US6] Run quickstart scenario 9: all three user paths, timed, using only the documentation. **G4** (SC-011)
 - [ ] T061 Update the Status section below with what passed, what was found, and anything that behaved differently from the plan
 
@@ -284,7 +285,75 @@ because `-version` is the only new Go behaviour.
 
 ## Status
 
-**61 tasks, 0 complete.** Generated 2026-08-28, not yet started.
+**62 tasks, 45 complete, 17 open.** Implemented 2026-08-28.
 
-Gates: **G1** (local, scenarios 1–4) at T044 · **G2** (checks enforced) at T047 ·
-**G3** (first automated release, one-way) at T049 · **G4** (documentation) at T060.
+### Done
+
+Phases 1–6 complete, Phase 7 complete except its four verification tasks, Phase 9
+documentation complete. The suite is green, `gofmt` and `go vet` are clean,
+`goreleaser check` validates, and `go.mod` changed by exactly one line — the module
+path — with `go.sum` untouched.
+
+### Open, and why
+
+**Docker daemon not running** (T041–T044): the image cannot be built or run here.
+Everything that produces it is written and validated — `Dockerfile`, the
+`dockers_v2` block, `goreleaser check` — but a configuration that validates is not
+an image that runs, and the difference is exactly where this project's last two
+escaped defects lived. These stay open until the image has actually been built and
+run.
+
+**Repository not yet on GitHub** (T012, T045–T054, T060): publication tasks, plus
+`go install` from the proxy, which cannot resolve a repository that does not exist.
+
+### What was found during implementation
+
+**The rename hit MQTT topic strings.** The first pass rewrote `"haigosmart/` →
+`"github.com/mmichaelb/haigosmart/` everywhere, which caught topic literals like
+`"haigosmart/light/703e975dc388/state"` as well as imports. It **built and vetted
+cleanly** — topics are just strings — and only the test suite caught it, with 15
+failures across `internal/hass` and `internal/mqtt`. Reverted and redone against
+`"haigosmart/internal/` and `"haigosmart/cmd/` specifically.
+
+Worth recording because T006's check as written (`go build` plus a grep for stale
+imports) would have passed a broken rename. The check that actually held was the
+test suite, which is the one thing that knows what a topic is supposed to be.
+
+**The pinned semantic-release version was stale**, and shipped 50 npm advisories
+(42 high). Current versions — semantic-release 25.0.9, release-notes-generator
+14.1.1 — report zero. semantic-release 25 also requires Node ^22.14, so the
+workflow's Node version moved from 20 to 22; pinning 20 would have failed on the
+first release rather than here.
+
+**FR-026 had a mechanism with nothing driving it.** `draft: true` was a task;
+un-drafting after verification was not. Added as T062.
+
+**A breaking change before 1.0 goes to 1.0.0**, not 0.2.0 — confirmed against a
+throwaway repository, not assumed. Documented in `CONTRIBUTING.md` and
+`docs/releasing.md`, because writing `!` pre-1.0 declares the project stable as a
+side effect.
+
+### Verified rather than assumed
+
+- History: 172 files ever added, zero credential, capture, or key hits (T001)
+- All six targets cross-compile with `CGO_ENABLED=0` (T003)
+- The rename touched 25 test files, import lines only — `git diff -- '*_test.go'`
+  filtered for non-import changes is empty (T007, SC-002)
+- `LICENSE` is the canonical GPL-3.0 text: SHA-256
+  `8ceb4b9ee5adedde47b31e975c1d90c73ad27b6b165a1dcd80c7c545eb65b903`
+- The version test failed before the implementation, for the right reason
+  (`flag provided but not defined: -version`)
+- Snapshot build produced six archives with the correct flat contents
+  (binary, `README.md`, `LICENSE`), `checksums.txt`, and `haigosmartd.exe` in the
+  Windows archives; the extracted binary reported its stamped version (T033, T034)
+- The version decision was checked in all three directions against a throwaway
+  repository with a real remote: `docs:` → no release, `feat:` → 0.2.0,
+  `feat!:` → 1.0.0 (T024)
+
+### Gates
+
+**G1** — scenarios 1–4: **partially passed.** Scenarios 1 and 3 pass; scenario 2's
+binary half passes and its image half is blocked on Docker; scenario 4 is entirely
+blocked on Docker.
+
+**G2**, **G3**, **G4** — not yet run. All need the repository published.

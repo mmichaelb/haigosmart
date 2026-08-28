@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"haigosmart/internal/mqtt/mqtttest"
-	"haigosmart/internal/protocol"
+	"github.com/mmichaelb/haigosmart/internal/mqtt/mqtttest"
+	"github.com/mmichaelb/haigosmart/internal/protocol"
 )
 
 func quiet() *slog.Logger { return slog.New(slog.NewTextHandler(io.Discard, nil)) }

@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"haigosmart/internal/bulb"
+	"github.com/mmichaelb/haigosmart/internal/bulb"
 )
 
 func TestDeclareCreatesADisconnectedEntry(t *testing.T) {

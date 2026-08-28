@@ -9,14 +9,14 @@ import (
 	"testing"
 	"time"
 
-	"haigosmart/internal/bulb"
-	"haigosmart/internal/bulb/fakebulb"
-	"haigosmart/internal/events"
-	"haigosmart/internal/lights"
-	"haigosmart/internal/mqtt"
-	"haigosmart/internal/mqtt/mqtttest"
-	"haigosmart/internal/registry"
-	"haigosmart/internal/server"
+	"github.com/mmichaelb/haigosmart/internal/bulb"
+	"github.com/mmichaelb/haigosmart/internal/bulb/fakebulb"
+	"github.com/mmichaelb/haigosmart/internal/events"
+	"github.com/mmichaelb/haigosmart/internal/lights"
+	"github.com/mmichaelb/haigosmart/internal/mqtt"
+	"github.com/mmichaelb/haigosmart/internal/mqtt/mqtttest"
+	"github.com/mmichaelb/haigosmart/internal/registry"
+	"github.com/mmichaelb/haigosmart/internal/server"
 )
 
 // rig is the whole stack: a lamp server with a fake bulb, a stub broker, and a

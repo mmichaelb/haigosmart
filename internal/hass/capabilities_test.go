@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"haigosmart/internal/bulb"
+	"github.com/mmichaelb/haigosmart/internal/bulb"
 )
 
 // Every row of the capability mapping in data-model.md. This is User Story 2:

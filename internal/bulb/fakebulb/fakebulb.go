@@ -16,7 +16,7 @@ import (
 	"sync"
 	"time"
 
-	"haigosmart/internal/protocol"
+	"github.com/mmichaelb/haigosmart/internal/protocol"
 )
 
 // Options configure a fake bulb.

@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"time"
 
-	"haigosmart/internal/bulb"
-	"haigosmart/internal/events"
-	"haigosmart/internal/registry"
+	"github.com/mmichaelb/haigosmart/internal/bulb"
+	"github.com/mmichaelb/haigosmart/internal/events"
+	"github.com/mmichaelb/haigosmart/internal/registry"
 )
 
 // DefaultTimeout is how long to wait for a bulb to confirm a change before

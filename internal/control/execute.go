@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"haigosmart/internal/bulb"
-	"haigosmart/internal/lights"
-	"haigosmart/internal/registry"
+	"github.com/mmichaelb/haigosmart/internal/bulb"
+	"github.com/mmichaelb/haigosmart/internal/lights"
+	"github.com/mmichaelb/haigosmart/internal/registry"
 )
 
 // CommandTimeout is how long to wait for a bulb to confirm a command before

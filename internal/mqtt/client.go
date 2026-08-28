@@ -23,7 +23,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"haigosmart/internal/protocol"
+	"github.com/mmichaelb/haigosmart/internal/protocol"
 )
 
 // Options configure a client.

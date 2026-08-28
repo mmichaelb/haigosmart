@@ -23,11 +23,41 @@ port. The bulb does not check the certificate it is given, so pointing that
 hostname at this server is enough: no firmware change, no modification, the bulb
 cannot tell the difference. Nothing leaves your network.
 
-## Quick start
+## Install
+
+Three ways, pick one.
+
+**With Go:**
+
+```bash
+go install github.com/mmichaelb/haigosmart/cmd/haigosmartd@latest
+```
+
+**Download a binary** — Linux, macOS, and Windows, on Intel and ARM — from the
+[latest release](https://github.com/mmichaelb/haigosmart/releases/latest), and
+check it:
+
+```bash
+curl -LO https://github.com/mmichaelb/haigosmart/releases/latest/download/checksums.txt
+sha256sum -c checksums.txt --ignore-missing
+```
+
+**Pull the container** (the unattended server; adopting a lamp needs a terminal):
+
+```bash
+docker pull ghcr.io/mmichaelb/haigosmart:latest
+```
+
+Or build from a clone:
 
 ```bash
 go build -o haigosmartd ./cmd/haigosmartd
-./haigosmartd
+```
+
+## Quick start
+
+```bash
+haigosmartd
 ```
 
 Redirect `47.254.156.103:1883` to this machine, power a bulb on, then:
@@ -70,7 +100,10 @@ entity only claims what the hardware has. See
 ## Docs
 
 - [docs/deploying.md](docs/deploying.md) — adopting a lamp, then running it
-  unattended from environment variables; every setting, and how to read the records
+  unattended from environment variables or a container; every setting, and how
+  to read the records
+- [docs/releasing.md](docs/releasing.md) — how releases are built and published,
+  and what to do when one fails
 - [docs/operating.md](docs/operating.md) — running it, systemd, verifying no
   traffic escapes, recovering a corrupt registry
 - [docs/capture-setup.md](docs/capture-setup.md) — how the protocol was worked
@@ -80,12 +113,22 @@ entity only claims what the hardware has. See
 - [specs/001-local-bulb-server/](specs/001-local-bulb-server/) — spec, plan,
   and the protocol contract
 
+## Licence
+
+GPL-3.0. See [LICENSE](LICENSE). You may use, modify, and redistribute this
+code; if you distribute a modified version, its source must be published under
+the same terms.
+
 ## Development
 
 ```bash
 make check     # fmt, vet, race tests
 make bench     # benchmarks
 ```
+
+Commit messages follow [Conventional Commits](https://www.conventionalcommits.org):
+they decide the next version, so `feat:` and `fix:` ship and everything else does
+not. See [CONTRIBUTING.md](.github/CONTRIBUTING.md).
 
 Built with the Go standard library throughout; the only dependency is Bubble Tea,
 and only `internal/tui` imports it. The MQTT client is written against the same

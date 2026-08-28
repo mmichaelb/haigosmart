@@ -16,19 +16,35 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"haigosmart/internal/config"
-	"haigosmart/internal/control"
-	"haigosmart/internal/events"
-	"haigosmart/internal/hass"
-	"haigosmart/internal/lights"
-	"haigosmart/internal/logging"
-	"haigosmart/internal/mqtt"
-	"haigosmart/internal/registry"
-	"haigosmart/internal/server"
-	"haigosmart/internal/tui"
+	"github.com/mmichaelb/haigosmart/internal/config"
+	"github.com/mmichaelb/haigosmart/internal/control"
+	"github.com/mmichaelb/haigosmart/internal/events"
+	"github.com/mmichaelb/haigosmart/internal/hass"
+	"github.com/mmichaelb/haigosmart/internal/lights"
+	"github.com/mmichaelb/haigosmart/internal/logging"
+	"github.com/mmichaelb/haigosmart/internal/mqtt"
+	"github.com/mmichaelb/haigosmart/internal/registry"
+	"github.com/mmichaelb/haigosmart/internal/server"
+	"github.com/mmichaelb/haigosmart/internal/tui"
 )
 
+// version is the release this binary was built from. GoReleaser stamps it at
+// link time; an ordinary `go build` leaves it as "dev", which is the honest
+// answer rather than a fabricated number.
+var version = "dev"
+
 func main() {
+	// Answered before anything else, deliberately. "Which build is this?" is the
+	// first question asked about a deployment that will not start, and it must be
+	// answerable while it is not starting — so this must not sit behind loading
+	// or validating the configuration.
+	for _, arg := range os.Args[1:] {
+		if arg == "-version" || arg == "--version" {
+			fmt.Println("haigosmartd", version)
+			return
+		}
+	}
+
 	if err := run(); err != nil {
 		fmt.Fprintln(os.Stderr, "haigosmartd:", err)
 		os.Exit(1)
@@ -64,7 +80,7 @@ func run() error {
 		defer logFile.Close()
 	}
 
-	logger.Info("starting", "config", cfg)
+	logger.Info("starting", "version", version, "config", cfg)
 	for _, name := range cfg.Overrides {
 		logger.Info("setting overridden on the command line", "setting", name)
 	}

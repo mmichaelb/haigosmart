@@ -11,11 +11,11 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"haigosmart/internal/bulb"
-	"haigosmart/internal/control"
-	"haigosmart/internal/events"
-	"haigosmart/internal/lights"
-	"haigosmart/internal/registry"
+	"github.com/mmichaelb/haigosmart/internal/bulb"
+	"github.com/mmichaelb/haigosmart/internal/control"
+	"github.com/mmichaelb/haigosmart/internal/events"
+	"github.com/mmichaelb/haigosmart/internal/lights"
+	"github.com/mmichaelb/haigosmart/internal/registry"
 )
 
 func newModel(t *testing.T) (*Model, *registry.Registry, *events.Bus) {

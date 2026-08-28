@@ -1,4 +1,4 @@
-module haigosmart
+module github.com/mmichaelb/haigosmart
 
 go 1.27
 

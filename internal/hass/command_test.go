@@ -3,8 +3,8 @@ package hass
 import (
 	"testing"
 
-	"haigosmart/internal/bulb"
-	"haigosmart/internal/lights"
+	"github.com/mmichaelb/haigosmart/internal/bulb"
+	"github.com/mmichaelb/haigosmart/internal/lights"
 )
 
 func cctCaps() bulb.Capabilities {

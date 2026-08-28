@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"haigosmart/internal/bulb"
-	"haigosmart/internal/lights"
+	"github.com/mmichaelb/haigosmart/internal/bulb"
+	"github.com/mmichaelb/haigosmart/internal/lights"
 )
 
 // commandPayload is what Home Assistant sends. Pointer fields distinguish "set

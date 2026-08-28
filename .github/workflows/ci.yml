@@ -1,5 +1,14 @@
 name: ci
-on: [push, pull_request]
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# A pull request from a fork must be able to run these checks and reach nothing
+# else. Read-only is the whole grant; the release workflow holds the write ones.
+permissions:
+  contents: read
 
 jobs:
   quality:
@@ -9,9 +18,40 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: '1.27'
+
       - name: gofmt
-        run: test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
+        run: |
+          unformatted="$(gofmt -l .)"
+          if [ -n "$unformatted" ]; then
+            echo "::error::these files are not gofmt-formatted:"
+            echo "$unformatted" | while read -r f; do echo "::error file=$f::run gofmt -w $f"; done
+            exit 1
+          fi
+
       - name: vet
         run: go vet ./...
+
       - name: test
         run: go test ./... -race
+
+  # Catches a change that compiles on the maintainer's machine and breaks an
+  # artefact nobody builds until release time. Cheap here, expensive there: a
+  # release that fails half way leaves a draft to clean up.
+  cross-compile:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        goos: [linux, darwin, windows]
+        goarch: [amd64, arm64]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.27'
+      - name: build ${{ matrix.goos }}/${{ matrix.goarch }}
+        env:
+          CGO_ENABLED: 0
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: go build -o /dev/null ./cmd/haigosmartd

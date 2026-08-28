@@ -1,0 +1,100 @@
+# GoReleaser builds and publishes everything for a release: binaries, archives,
+# checksums, the container image, and the GitHub release itself.
+#
+# It does NOT decide the version. semantic-release does that and creates the tag,
+# then invokes `goreleaser release --clean` from its publish phase — see
+# .releaserc.json and the comment at the top of .github/workflows/release.yml.
+version: 2
+
+project_name: haigosmart
+
+builds:
+  - id: haigosmartd
+    main: ./cmd/haigosmartd
+    binary: haigosmartd
+    env:
+      - CGO_ENABLED=0
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+    flags:
+      # Keeps build paths out of the binary, so the same source gives the same
+      # output regardless of where it was built.
+      - -trimpath
+      # scratch has no zone database. Without this, an operator setting TZ on the
+      # container gets UTC timestamps that look perfectly well-formed — a wrong
+      # answer rather than a missing one.
+      - -tags=timetzdata
+    ldflags:
+      - -s -w -X main.version={{ .Version }}
+
+archives:
+  - id: haigosmartd
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    # GPL-3.0 requires the terms travel with the binary.
+    files:
+      - README.md
+      - LICENSE
+
+checksum:
+  name_template: checksums.txt
+  algorithm: sha256
+
+changelog:
+  use: github
+  sort: asc
+  groups:
+    - title: Features
+      regexp: '^.*?feat(\(.+\))??!?:.+$'
+      order: 0
+    - title: Fixes
+      regexp: '^.*?fix(\(.+\))??!?:.+$'
+      order: 1
+    - title: Performance
+      regexp: '^.*?perf(\(.+\))??!?:.+$'
+      order: 2
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^chore:'
+      - '^ci:'
+      - '^style:'
+      - '^refactor:'
+      - '^spec:'
+
+dockers_v2:
+  - id: haigosmartd
+    ids: [haigosmartd]
+    images:
+      - ghcr.io/mmichaelb/haigosmart
+    dockerfile: Dockerfile
+    platforms:
+      - linux/amd64
+      - linux/arm64
+    tags:
+      - "ghcr.io/mmichaelb/haigosmart:{{ .Version }}"
+      - "ghcr.io/mmichaelb/haigosmart:{{ .Major }}.{{ .Minor }}"
+      - "ghcr.io/mmichaelb/haigosmart:{{ .Major }}"
+      - "ghcr.io/mmichaelb/haigosmart:latest"
+    labels:
+      org.opencontainers.image.title: haigosmart
+      org.opencontainers.image.description: A local replacement for the Aigo bulb cloud
+      org.opencontainers.image.source: https://github.com/mmichaelb/haigosmart
+      org.opencontainers.image.licenses: GPL-3.0-or-later
+      org.opencontainers.image.version: "{{ .Version }}"
+      org.opencontainers.image.revision: "{{ .FullCommit }}"
+
+release:
+  # Drafted on purpose. The release becomes visible only after the workflow has
+  # confirmed the image manifest resolves for both architectures, so a run that
+  # publishes binaries and then fails to push images leaves an invisible draft
+  # rather than a release advertising an image that does not exist.
+  draft: true
+  replace_existing_draft: true
+  footer: |
+    ---
+    Container image: `ghcr.io/mmichaelb/haigosmart:{{ .Version }}`

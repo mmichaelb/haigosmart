@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"haigosmart/internal/bulb"
+	"github.com/mmichaelb/haigosmart/internal/bulb"
 )
 
 func newStore(t *testing.T) (*Store, string) {

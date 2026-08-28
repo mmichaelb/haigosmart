@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"haigosmart/internal/control"
+	"github.com/mmichaelb/haigosmart/internal/control"
 )
 
 // ParseLamps reads the configured lamp set: comma-separated deviceID=name

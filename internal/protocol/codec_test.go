@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"haigosmart/internal/bulb"
+	"github.com/mmichaelb/haigosmart/internal/bulb"
 )
 
 // fixture loads a captured packet from testdata. These bytes came off real

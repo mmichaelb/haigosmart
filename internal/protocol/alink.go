@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"haigosmart/internal/bulb"
+	"github.com/mmichaelb/haigosmart/internal/bulb"
 )
 
 // Alink property names used by the Aigo bulbs, from the capture.
