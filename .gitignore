@@ -1,0 +1,16 @@
+# build output
+/haigosmartd
+*.exe
+*.test
+*.out
+
+# captures are local evidence, never committed (see captures/.gitignore)
+*.mitm
+*.pcap
+*.jsonl
+
+# editors / OS
+.idea/
+.vscode/
+.DS_Store
+*.swp
