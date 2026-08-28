@@ -104,11 +104,39 @@ func (b *Bus) log(e Event) {
 	for _, c := range e.Changed {
 		attrs = append(attrs, c.Field, c.From+"→"+c.To)
 	}
-	level := slog.LevelInfo
-	if e.Kind == ProtocolError || e.Kind == DuplicateID {
-		level = slog.LevelWarn
+	msg, level := e.Kind.record()
+	b.logger.Log(context.Background(), level, msg, attrs...)
+}
+
+// record is the log line's message and level for a kind, per
+// specs/003-headless-deployment/contracts/log-records.md.
+//
+// The message is fixed per kind and carries no value from the event: everything
+// variable is already an attribute above. A record reading {"msg":"bulb
+// disconnected","detail":"no keep-alive for 180s"} can be grouped by message and
+// filtered by field; {"msg":"disconnected (no keep-alive for 180s)"} can be
+// neither. Event.Text() is unaffected — the terminal renders from the event.
+func (k Kind) record() (msg string, level slog.Level) {
+	switch k {
+	case Connected:
+		return "bulb connected", slog.LevelInfo
+	case Disconnected:
+		return "bulb disconnected", slog.LevelInfo
+	case Discovered:
+		return "bulb discovered", slog.LevelInfo
+	case CommandResult:
+		return "command failed", slog.LevelWarn
+	case ProtocolError:
+		return "protocol error", slog.LevelWarn
+	case DuplicateID:
+		return "duplicate device id", slog.LevelWarn
+	case Renamed:
+		return "bulb renamed", slog.LevelInfo
+	case Rejected:
+		return "bulb rejected", slog.LevelWarn
+	default:
+		return "bulb reported state", slog.LevelInfo
 	}
-	b.logger.Log(context.Background(), level, e.Text(), attrs...)
 }
 
 func (k Kind) String() string {
@@ -127,6 +155,8 @@ func (k Kind) String() string {
 		return "duplicate_id"
 	case Renamed:
 		return "renamed"
+	case Rejected:
+		return "rejected"
 	default:
 		return "state_changed"
 	}

@@ -90,6 +90,62 @@ func (r *Registry) Upsert(deviceID, remoteAddr string, caps bulb.Capabilities, n
 	return *b, true
 }
 
+// Declare records a lamp the configuration says this instance is responsible
+// for, whether or not it has ever connected.
+//
+// This is what makes the configured set authoritative rather than advisory: a
+// declared lamp exists from startup — named, adopted, and disconnected until it
+// proves otherwise — so Home Assistant shows it immediately instead of waiting
+// for it to appear, and a lost registry file costs nothing but the last known
+// state, which the lamp reports again on connecting.
+//
+// Declaring is not a reset. Everything already learned from the lamp — its
+// state, capabilities, firmware, and first-seen time — survives, because the
+// configuration says which lamps to serve, not what they are.
+func (r *Registry) Declare(deviceID, name string) (created, renamed bool, err error) {
+	if strings.TrimSpace(deviceID) == "" {
+		return false, false, errors.New("device id must not be empty")
+	}
+	if strings.TrimSpace(name) == "" {
+		return false, false, errors.New("name must not be empty")
+	}
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	existing := r.bulbs[deviceID]
+	for _, other := range r.bulbs {
+		if other != existing && other.Name == name {
+			return false, false, NameInUseError{Name: name, Owner: other.DeviceID}
+		}
+	}
+
+	if existing == nil {
+		r.bulbs[deviceID] = &bulb.Bulb{
+			DeviceID: deviceID,
+			Name:     name,
+			Status:   bulb.Disconnected,
+		}
+		r.dirty()
+		return true, false, nil
+	}
+
+	if existing.Name != name {
+		existing.Name = name
+		renamed = true
+	}
+	// A lamp loaded from the registry file but never adopted is adopted now:
+	// naming it in the configuration is the same deliberate act as naming it in
+	// the terminal.
+	if existing.Status == bulb.Discovered {
+		existing.Status = bulb.Connected
+	}
+	if renamed {
+		r.dirty()
+	}
+	return false, renamed, nil
+}
+
 // View returns a snapshot of one bulb. Callers get a copy rather than a pointer
 // into the registry: shared mutable state read without the lock is a data race,
 // and handing out pointers makes that race the default rather than the mistake.

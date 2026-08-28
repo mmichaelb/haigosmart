@@ -233,7 +233,7 @@ func describe(cmd Command) string {
 // rename assigns a name. Naming a discovered bulb adopts it: one verb, because
 // a bulb worth keeping is a bulb worth naming.
 func (c *Controller) rename(target bulb.Bulb, name string) Result {
-	if _, err := Parse(name); err == nil && isVerb(name) {
+	if _, err := Parse(name); err == nil && IsVerb(name) {
 		return errf("%q is a command name; pick something else so `%s` stays unambiguous", name, name)
 	}
 	previous := target.Name
@@ -247,7 +247,10 @@ func (c *Controller) rename(target bulb.Bulb, name string) Result {
 	return okf("%s: renamed from %s", name, previous)
 }
 
-func isVerb(s string) bool {
+// IsVerb reports whether s names a terminal command. A bulb named after one
+// would be unaddressable from the terminal, so both interactive renames and
+// configured lamp names are refused on this basis.
+func IsVerb(s string) bool {
 	for _, v := range Verbs {
 		if strings.EqualFold(v, s) {
 			return true

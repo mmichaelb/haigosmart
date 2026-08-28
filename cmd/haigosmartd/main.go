@@ -5,21 +5,23 @@ package main
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	"log/slog"
 	"os"
 	"os/signal"
 	"path/filepath"
+	"sync"
 	"syscall"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"haigosmart/internal/config"
 	"haigosmart/internal/control"
 	"haigosmart/internal/events"
 	"haigosmart/internal/hass"
 	"haigosmart/internal/lights"
+	"haigosmart/internal/logging"
 	"haigosmart/internal/mqtt"
 	"haigosmart/internal/registry"
 	"haigosmart/internal/server"
@@ -34,37 +36,20 @@ func main() {
 }
 
 func run() error {
-	defaultRegistry, err := registry.DefaultPath()
+	start := time.Now()
+
+	cfg, err := config.Load(os.Args[1:], os.Getenv)
 	if err != nil {
-		defaultRegistry = "registry.json"
+		return err
 	}
-	var (
-		addr        = flag.String("listen", server.DefaultAddr, "address to accept bulb connections on")
-		registryArg = flag.String("registry", defaultRegistry, "path to the registry file")
-		logPath     = flag.String("log", "", "write structured logs here (default: stderr in -headless, a temp file otherwise)")
-		headless    = flag.Bool("headless", false, "run without the terminal interface")
-		verbose     = flag.Bool("v", false, "debug logging, including per-frame protocol traces")
-		cmdTimeout  = flag.Duration("command-timeout", control.CommandTimeout,
-			"how long to wait for a bulb to confirm a command; bulbs that fade report only once the fade finishes")
-
-		mqttBroker  = flag.String("mqtt-broker", "", "host:port of your MQTT broker; empty disables the Home Assistant integration")
-		mqttUser    = flag.String("mqtt-username", "", "broker username, if the broker needs one")
-		mqttPass    = flag.String("mqtt-password", "", "broker password, if the broker needs one")
-		mqttClient  = flag.String("mqtt-client-id", "haigosmart", "client id presented to the broker")
-		mqttPrefix  = flag.String("mqtt-prefix", "haigosmart", "base topic for state, availability and commands")
-		discPrefix  = flag.String("mqtt-discovery-prefix", "homeassistant", "Home Assistant discovery prefix")
-		ctMinKelvin = flag.Int("ct-min-kelvin", 2700, "Kelvin at the lamp's warmest setting")
-		ctMaxKelvin = flag.Int("ct-max-kelvin", 6500, "Kelvin at the lamp's coolest setting")
-	)
-	flag.Parse()
-
-	// An inverted Kelvin range would silently reverse every warmth value shown
-	// in Home Assistant, so it is refused rather than accepted and worked around.
-	if *ctMinKelvin >= *ctMaxKelvin {
-		return fmt.Errorf("-ct-min-kelvin (%d) must be below -ct-max-kelvin (%d)", *ctMinKelvin, *ctMaxKelvin)
+	// Everything is checked before a socket opens, so a refusal costs nothing to
+	// unwind and an operator learns about it immediately rather than at the
+	// first connection.
+	if err := cfg.Validate(); err != nil {
+		return err
 	}
 
-	logFile, logger, err := newLogger(*logPath, *headless, *verbose)
+	logFile, logger, err := newLogger(cfg.LogPath, cfg.Headless, cfg.Verbose, start)
 	if err != nil {
 		return err
 	}
@@ -72,45 +57,82 @@ func run() error {
 		defer logFile.Close()
 	}
 
-	store := registry.NewStore(*registryArg, 2*time.Second)
+	logger.Info("starting", "config", cfg)
+	for _, name := range cfg.Overrides {
+		logger.Info("setting overridden on the command line", "setting", name)
+	}
+
+	store := registry.NewStore(cfg.RegistryPath, 2*time.Second)
+	// A registry that cannot be written is a degradation, not a failure: the
+	// file is a cache, and the configured lamp set survives without it. Report
+	// the first failure loudly and the rest quietly, because a read-only mount
+	// makes every save fail forever.
+	var saveFailed sync.Once
+	store.OnError = func(err error) {
+		saveFailed.Do(func() {
+			logger.Warn("saving the registry failed", "error", err, "path", cfg.RegistryPath)
+		})
+		logger.Debug("saving the registry failed", "error", err, "path", cfg.RegistryPath)
+	}
 	reg, err := store.Load()
 	if err != nil {
 		return err
 	}
 	defer func() {
 		if err := store.Close(); err != nil {
-			logger.Error("saving the registry on shutdown failed", "error", err, "path", *registryArg)
+			logger.Error("saving the registry on shutdown failed", "error", err, "path", cfg.RegistryPath)
 		}
 	}()
 
 	bus := events.NewBus(logger)
-	srv := server.New(reg, bus, filepath.Join(filepath.Dir(*registryArg), "tls.key"))
+	srv := server.New(reg, bus, filepath.Join(filepath.Dir(cfg.RegistryPath), "tls.key"))
+
+	// The configured set is authoritative. Declaring before the listener opens
+	// means a configured lamp is present, named and unavailable from the first
+	// second, rather than materialising whenever it happens to connect.
+	if err := declareLamps(reg, cfg, logger); err != nil {
+		return err
+	}
+	if cfg.Headless {
+		configured := make(map[string]bool, len(cfg.Lamps))
+		for _, l := range cfg.Lamps {
+			configured[l.DeviceID] = true
+		}
+		srv.Admit = func(deviceID string) bool { return configured[deviceID] }
+	}
 	svc := lights.New(reg, bus)
-	svc.SetTimeout(*cmdTimeout)
+	svc.SetTimeout(cfg.CommandTimeout)
 	ctrl := control.New(svc, reg)
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 
+	// NotifyContext cancels but does not say which signal did it, and the
+	// shutdown record is more useful when it does. Both registrations receive
+	// the same signal.
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, os.Interrupt, syscall.SIGTERM)
+	defer signal.Stop(sigs)
+
 	serverErr := make(chan error, 1)
-	go func() { serverErr <- srv.ListenAndServe(ctx, *addr) }()
+	go func() { serverErr <- srv.ListenAndServe(ctx, cfg.Listen) }()
 
 	// The Home Assistant bridge is optional and must never be able to stop the
 	// server starting: a broker that is down is a broker problem, and the lamps
 	// keep working from the terminal regardless.
-	if *mqttBroker != "" {
+	if cfg.MQTTBroker != "" {
 		hassCfg := hass.Config{
-			DiscoveryPrefix: *discPrefix,
-			Prefix:          *mqttPrefix,
-			MinKelvin:       *ctMinKelvin,
-			MaxKelvin:       *ctMaxKelvin,
+			DiscoveryPrefix: cfg.DiscoveryPrefix,
+			Prefix:          cfg.MQTTPrefix,
+			MinKelvin:       cfg.MinKelvin,
+			MaxKelvin:       cfg.MaxKelvin,
 		}
 		var bridge *hass.Bridge
 		client := mqtt.New(mqtt.Options{
-			Broker:      *mqttBroker,
-			ClientID:    *mqttClient,
-			Username:    *mqttUser,
-			Password:    *mqttPass,
+			Broker:      cfg.MQTTBroker,
+			ClientID:    cfg.MQTTClientID,
+			Username:    cfg.MQTTUsername,
+			Password:    cfg.MQTTPassword,
 			WillTopic:   hassCfg.StatusTopic(),
 			WillPayload: []byte(hass.Offline),
 			WillRetain:  true,
@@ -121,16 +143,23 @@ func run() error {
 
 		go func() { _ = client.Run(ctx) }()
 		go func() { _ = bridge.Run(ctx) }()
-		logger.Info("home assistant integration enabled", "broker", *mqttBroker,
-			"kelvin_range", fmt.Sprintf("%d-%d", *ctMinKelvin, *ctMaxKelvin))
+		logger.Info("home assistant integration enabled", "broker", cfg.MQTTBroker,
+			"kelvin_range", fmt.Sprintf("%d-%d", cfg.MinKelvin, cfg.MaxKelvin))
 	}
 
-	if *headless {
-		logger.Info("listening for bulbs", "addr", *addr, "registry", *registryArg)
+	if cfg.Headless {
+		logger.Info("listening for bulbs", "addr", cfg.Listen, "registry", cfg.RegistryPath)
 		select {
 		case err := <-serverErr:
 			return err
 		case <-ctx.Done():
+			logger.Info("shutting down", "signal", signalName(sigs))
+			// Persisting on the way out is a code path rather than an accident
+			// of the deferred Close's timing, so a debounced save still in
+			// flight cannot be lost to the process exiting first.
+			if err := store.Flush(); err != nil {
+				logger.Error("saving the registry on shutdown failed", "error", err, "path", cfg.RegistryPath)
+			}
 			return <-serverErr
 		}
 	}
@@ -149,27 +178,72 @@ func run() error {
 	return <-serverErr
 }
 
-// newLogger sets up structured logging. With the terminal interface running,
-// logs must not go to stderr: they would scribble over the display. They go to
-// a file instead, which is also what makes them useful after the fact.
-func newLogger(path string, headless, verbose bool) (*os.File, *slog.Logger, error) {
+// newLogger sets up structured logging. Records are JSON lines in both modes,
+// in the format fixed by specs/003-headless-deployment/contracts/log-records.md.
+//
+// Where they go differs. Headless mode writes to standard output, because that
+// is a container's log stream and because there is no display to protect. With
+// the terminal interface running they must not go to a stream at all — they
+// would scribble over the display — so they go to a file, which is also what
+// makes them useful after the fact.
+func newLogger(path string, headless, verbose bool, start time.Time) (*os.File, *slog.Logger, error) {
 	level := slog.LevelInfo
 	if verbose {
 		level = slog.LevelDebug
 	}
 	if path == "" {
 		if headless {
-			return nil, slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: level})), nil
+			// A failed write here stops the process: an unattended server whose
+			// records reach nobody is not running.
+			w := &logging.FatalWriter{W: os.Stdout, Stderr: os.Stderr, Exit: os.Exit}
+			return nil, logging.New(w, level, start), nil
 		}
-		path = filepathJoinTemp("haigosmart.log")
+		path = filepath.Join(os.TempDir(), "haigosmart.log")
 	}
 	f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
 	if err != nil {
 		return nil, nil, fmt.Errorf("opening log file %s: %w. pass -log to choose another path", path, err)
 	}
-	return f, slog.New(slog.NewJSONHandler(f, &slog.HandlerOptions{Level: level})), nil
+	return f, logging.New(f, level, start), nil
 }
 
-func filepathJoinTemp(name string) string {
-	return os.TempDir() + string(os.PathSeparator) + name
+// signalName reports which signal arrived, or "unknown" when shutdown came from
+// somewhere else — the terminal quitting, for instance.
+func signalName(sigs <-chan os.Signal) string {
+	select {
+	case sig := <-sigs:
+		return sig.String()
+	default:
+		return "unknown"
+	}
+}
+
+// declareLamps applies the configured lamp set to the registry and reports what
+// it found.
+//
+// Registry entries the configuration does not name are left on disk untouched —
+// the interactive mode should still show everything ever adopted — but they are
+// reported, because the failure this catches is otherwise silent: one lamp
+// dropped from a manifest by a bad edit, and the only symptom is a room that
+// stops responding.
+func declareLamps(reg *registry.Registry, cfg config.Config, logger *slog.Logger) error {
+	configured := make(map[string]bool, len(cfg.Lamps))
+	for _, l := range cfg.Lamps {
+		created, renamed, err := reg.Declare(l.DeviceID, l.Name)
+		if err != nil {
+			return fmt.Errorf("configured lamp %s=%s: %w", l.DeviceID, l.Name, err)
+		}
+		configured[l.DeviceID] = true
+		logger.Info("lamp configured", "device", l.DeviceID, "name", l.Name,
+			"created", created, "renamed", renamed)
+	}
+	if len(cfg.Lamps) == 0 {
+		return nil
+	}
+	for _, b := range reg.List() {
+		if !configured[b.DeviceID] {
+			logger.Warn("registry lamp not configured", "device", b.DeviceID, "name", b.Name)
+		}
+	}
+	return nil
 }

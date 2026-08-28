@@ -228,6 +228,12 @@ func DecodeSubscribe(payload []byte) (packetID uint16, topics []string, err erro
 var (
 	// ConnackAccepted is CONNACK with session-present 0 and return code 0.
 	ConnackAccepted = []byte{TypeConnack << 4, 2, 0, 0}
+	// ConnackRefusedNotAuthorized is CONNACK with return code 5, "connection
+	// refused, not authorized" (MQTT 3.1.1 section 3.2.2.3). It is the answer to
+	// a bulb this server has not been configured to serve: telling the bulb why
+	// beats dropping the socket, and anyone reading a packet capture sees a
+	// refusal rather than a mystery.
+	ConnackRefusedNotAuthorized = []byte{TypeConnack << 4, 2, 0, ConnackNotAuthorized}
 	// Pingresp answers a PINGREQ.
 	Pingresp = []byte{TypePingresp << 4, 0}
 )

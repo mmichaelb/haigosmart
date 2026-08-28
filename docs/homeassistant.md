@@ -32,6 +32,17 @@ does without Home Assistant.
 Adopted lamps appear within a minute under **Settings → Devices & Services →
 MQTT**, with no YAML edited by hand.
 
+## Unattended instances publish before the lamps connect
+
+Running headless, the lamps come from configuration rather than from whoever
+connects, so they are published to Home Assistant at startup — named, and shown
+as **unavailable** until the lamp is actually powered on. Nothing has to be
+adopted, and a restart changes nothing visible here. See
+[deploying.md](deploying.md).
+
+A lamp not named in that configuration is refused by the server and never
+appears in Home Assistant at all.
+
 ## Adopting a lamp
 
 Adoption stays in the terminal, deliberately. A brand-new bulb shows up as

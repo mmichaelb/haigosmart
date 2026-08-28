@@ -42,17 +42,28 @@ restarts.
 
 ## Flags
 
+Every flag below also has an environment variable — `-listen` is
+`HAIGOSMART_LISTEN`, and so on for all of them. For unattended deployment,
+configuring from the environment, and reading the JSON records, see
+[deploying.md](deploying.md); this page covers running it by hand.
+
 | Flag | Default | Meaning |
 |---|---|---|
 | `-listen` | `:1883` | where to accept bulb connections |
 | `-registry` | `$XDG_CONFIG_HOME/haigosmart/registry.json` | where the bulb list lives |
-| `-log` | temp file, or stderr with `-headless` | structured JSON logs |
-| `-headless` | `false` | no terminal interface; for systemd |
+| `-log` | temp file, or stdout with `-headless` | structured JSON logs |
+| `-headless` | `false` | no terminal interface, no input; serves only the configured lamps |
+| `-lamps` | *(empty)* | `deviceID=name` pairs; required with `-headless` |
 | `-v` | `false` | debug logging, including the TLS ClientHello a bulb offers |
-| `-command-timeout` | `10s` | how long to wait for a bulb to confirm a command |
+| `-command-timeout` | `5s` | how long before a command is reported unconfirmed |
 
-With the terminal interface running, logs go to a file rather than stderr — on
-stderr they would scribble over the display.
+With the terminal interface running, logs go to a file rather than a stream — on
+stderr they would scribble over the display. Headless, they go to standard
+output as JSON lines and nothing else is written there.
+
+`-headless` is not just "the same server without a display": it accepts no
+input, adopts nothing, and serves exactly the lamps in `-lamps`. Adoption stays
+in the terminal. See [deploying.md](deploying.md).
 
 ## Under systemd
 
@@ -62,7 +73,9 @@ Description=haigosmart local bulb server
 After=network-online.target
 
 [Service]
-ExecStart=/usr/local/bin/haigosmartd -headless -log /var/log/haigosmart.log
+Environment=HAIGOSMART_HEADLESS=true
+Environment=HAIGOSMART_LAMPS=703e975dc388=kitchen
+ExecStart=/usr/local/bin/haigosmartd
 Restart=always
 User=haigosmart
 

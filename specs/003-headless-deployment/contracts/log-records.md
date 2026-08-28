@@ -7,8 +7,11 @@ nothing else is ever written there (FR-005).
 
 ## Shape
 
+Field order is whatever `slog`'s JSON handler emits — `time`, `level`, `msg`, then
+attributes, with `since` among them. Order carries no meaning; read by key.
+
 ```json
-{"time":"2026-08-28 14:03:12.123","since":"1m12.345s","level":"INFO","msg":"bulb connected","kind":"connected","device":"a1b2c3d4","name":"headlamp"}
+{"time":"2026-08-28 14:03:12.123","level":"INFO","msg":"bulb connected","kind":"connected","device":"a1b2c3d4","name":"headlamp","since":"1m12.345s"}
 ```
 
 | Field | Present | Type | Notes |
@@ -68,7 +71,7 @@ at most once per five minutes per device identifier. The suppressed count is car
 repeat record, so suppression is visible rather than silent:
 
 ```json
-{"time":"2026-08-28 14:08:12.401","since":"6m12.6s","level":"WARN","msg":"bulb rejected","kind":"rejected","device":"9f9f9f9f","detail":"192.168.45.77:51234 (34 attempts since 14:03:12)"}
+{"time":"2026-08-28 14:08:12.401","level":"WARN","msg":"bulb rejected","kind":"rejected","device":"9f9f9f9f","detail":"192.168.45.77:51234 (34 attempts since 14:03:12)","since":"6m12.6s"}
 ```
 
 ## Redaction

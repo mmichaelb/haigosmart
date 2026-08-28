@@ -69,6 +69,8 @@ entity only claims what the hardware has. See
 
 ## Docs
 
+- [docs/deploying.md](docs/deploying.md) — adopting a lamp, then running it
+  unattended from environment variables; every setting, and how to read the records
 - [docs/operating.md](docs/operating.md) — running it, systemd, verifying no
   traffic escapes, recovering a corrupt registry
 - [docs/capture-setup.md](docs/capture-setup.md) — how the protocol was worked

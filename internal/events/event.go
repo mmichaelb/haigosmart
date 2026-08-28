@@ -26,6 +26,15 @@ const (
 	// adopted while already connected produces no other event, and anything
 	// watching the registry would never learn the lamp had become controllable.
 	Renamed
+	// Rejected is a bulb that connected while the server was running unattended
+	// and was not in the configured lamp set. It is a first-class event rather
+	// than a bare log line so both surfaces describe it in the same words.
+	Rejected
+
+	// numKinds is one past the last kind. It exists so a test can walk every
+	// kind and fail when a new one arrives without a log message, a level, and a
+	// display string. Keep it last.
+	numKinds
 )
 
 // Event is a single thing that happened, ready to render or log.
@@ -71,6 +80,8 @@ func (e Event) Text() string {
 		return "WARNING duplicate device id, also seen from " + e.Detail
 	case Renamed:
 		return e.Detail
+	case Rejected:
+		return "rejected: not in the configured lamp set"
 	default:
 		parts := make([]string, 0, len(e.Changed))
 		for _, c := range e.Changed {

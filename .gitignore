@@ -14,3 +14,7 @@
 .vscode/
 .DS_Store
 *.swp
+
+# python helper scripts
+__pycache__/
+*.pyc

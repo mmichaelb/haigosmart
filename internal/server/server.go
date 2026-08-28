@@ -26,6 +26,15 @@ type Server struct {
 	bus   *events.Bus
 	certs *certSource
 
+	// Admit decides whether a bulb may be served, once it has identified
+	// itself. Nil admits everything, which is what the interactive mode wants
+	// and what every earlier release did — so today's behaviour is preserved by
+	// construction rather than by a branch someone has to remember.
+	//
+	// It is a predicate rather than a set so that this package stays unaware of
+	// where the configuration comes from. Set it before Serve.
+	Admit func(deviceID string) bool
+
 	// now is swappable so tests need not sleep.
 	nowFn func() time.Time
 
@@ -33,6 +42,11 @@ type Server struct {
 	// so a genuine duplicate can be told apart from an ordinary reconnect.
 	takeoverMu sync.Mutex
 	takeovers  map[string][]time.Time
+
+	// rejections records, per device id, when a refusal was last reported and
+	// how many have been suppressed since.
+	rejectMu sync.Mutex
+	rejects  map[string]*rejection
 
 	wg sync.WaitGroup
 }
@@ -44,6 +58,7 @@ func New(reg *registry.Registry, bus *events.Bus, keyPath string) *Server {
 	return &Server{
 		reg: reg, bus: bus, certs: newCertSource(keyPath),
 		nowFn: time.Now, takeovers: make(map[string][]time.Time),
+		rejects: make(map[string]*rejection),
 	}
 }
 
@@ -129,6 +144,41 @@ func (s *Server) noteTakeover(deviceID string, now time.Time) bool {
 	kept = append(kept, now)
 	s.takeovers[deviceID] = kept
 	return len(kept) >= takeoverThreshold
+}
+
+// rejectionWindow is how often one device id's refusal is worth reporting. A
+// refused bulb reconnects indefinitely, so without this the record stream would
+// be unbounded and the interesting records would be buried in it.
+const rejectionWindow = 5 * time.Minute
+
+type rejection struct {
+	reportedAt time.Time
+	firstAt    time.Time
+	suppressed int
+}
+
+// noteRejection reports whether this refusal is worth a record, and how many
+// went unreported since the last one. The count is carried in the record so the
+// suppression is visible rather than silent.
+func (s *Server) noteRejection(deviceID string, now time.Time) (report bool, suppressed int, since time.Time) {
+	s.rejectMu.Lock()
+	defer s.rejectMu.Unlock()
+
+	r, seen := s.rejects[deviceID]
+	if !seen {
+		s.rejects[deviceID] = &rejection{reportedAt: now}
+		return true, 0, time.Time{}
+	}
+	if now.Sub(r.reportedAt) < rejectionWindow {
+		if r.suppressed == 0 {
+			r.firstAt = now
+		}
+		r.suppressed++
+		return false, 0, time.Time{}
+	}
+	suppressed, since = r.suppressed, r.firstAt
+	r.reportedAt, r.suppressed, r.firstAt = now, 0, time.Time{}
+	return true, suppressed, since
 }
 
 // logClientHello records what a TLS client offered. When a handshake fails this

@@ -58,10 +58,17 @@ grep -c hunter2 out.jsonl err.txt                                     # must be 
 ```
 
 **Expect**: `jq` accepts every line; the password appears nowhere, including in the
-broker-connection-failure records. `time` reads `2026-08-28 14:03:12.123`, `since` grows
-monotonically.
+broker-connection-failure records. `time` reads `2026-08-28 14:03:12.123`, and every `since`
+lies between zero and the run's own length. Do not expect `since` to rise strictly down the
+file: a record is stamped when it is logged and written when its goroutine reaches the
+writer, so under concurrency the two orders differ. That is precisely why the field is
+anchored to process start rather than to the previous record.
 
-**G1** — scenarios 1–4 green.
+**G1** — scenarios 1–4 green. **Passed 2026-08-28**: environment-only startup, flag
+override recorded by name, four invalid settings each refused before the listener with a
+message naming the setting, and a three-second run whose every line satisfied
+`jq -e '.time and .since and .level and .msg'` with zero occurrences of the password —
+including the repeated broker-connection-failure records.
 
 ## Scenario 5 — A configured lamp is served (FR-016, FR-021)
 
@@ -121,7 +128,15 @@ chmod a-w /tmp/hg && kill -TERM <pid>  # read-only registry
 directory read-only: one `saving the registry failed` at WARN, later attempts at DEBUG, the
 instance keeps serving throughout and still exits 0.
 
-**G2** — scenarios 5–9 green on real hardware.
+**G2** — scenarios 5–9 green on real hardware. **Not yet run**: needs a lamp, and
+scenario 6 needs a second lamp that is deliberately left out of the configuration.
+
+Scenario 7's software half was exercised on 2026-08-28 with a hand-written registry file
+holding two lamps and a configuration naming one: the named lamp was renamed to its
+configured name, the other was reported once as `registry lamp not configured` and left on
+disk. The hardware half — that the unconfigured lamp is actually refused when it connects —
+is covered by `internal/server/admit_test.go` through a real CONNECT/CONNACK exchange, and
+remains to be confirmed against the physical lamp.
 
 ## Scenario 10 — Interactive mode is untouched (SC-010)
 
@@ -129,6 +144,11 @@ instance keeps serving throughout and still exits 0.
 go test ./... -race    # the feature 001 and 002 suites, unchanged
 ./haigosmartd          # no flags
 ```
+
+**Passed 2026-08-28** for the automated half: `go test ./... -race` is green across all 12
+packages that have tests (15 in the module), and `git diff -- '*_test.go'` is empty — no existing test was changed to
+accommodate this feature. Six test files were added, none edited. The terminal run itself
+belongs with G2, since it needs a lamp.
 
 **Expect**: every existing test passes without modification; the terminal behaves exactly as
 documented in

@@ -154,6 +154,16 @@ func (b *Bulb) handshake() error {
 	if pkt.Type != protocol.TypeConnack {
 		return fmt.Errorf("fakebulb: expected CONNACK, got type %d", pkt.Type)
 	}
+	// A server may refuse this bulb. Reading the return code is what turns that
+	// refusal into an honest error here rather than into a confusing failure two
+	// packets later.
+	_, code, err := protocol.DecodeConnack(pkt.Payload)
+	if err != nil {
+		return fmt.Errorf("fakebulb: decoding CONNACK: %w", err)
+	}
+	if code != protocol.ConnackAcceptedCode {
+		return fmt.Errorf("fakebulb: server refused the connection: %s", protocol.ConnackReason(code))
+	}
 	if b.opts.Malformed {
 		// A remaining length that never terminates: the server must drop this
 		// connection and keep serving everyone else.

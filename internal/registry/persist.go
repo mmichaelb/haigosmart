@@ -37,6 +37,14 @@ type storedBulb struct {
 type Store struct {
 	path string
 
+	// OnError reports a failed background save. Background failures were
+	// discarded before this hook existed, which was harmless while a person was
+	// watching the terminal and the shutdown save would report the problem. A
+	// read-only registry directory makes every save fail forever, so the failure
+	// has to be reportable without a person present. Nil means discard; set it
+	// before the registry is handed to anything that mutates it.
+	OnError func(error)
+
 	mu      sync.Mutex
 	timer   *time.Timer
 	pending bool
@@ -125,7 +133,9 @@ func (s *Store) schedule() {
 		s.mu.Lock()
 		s.timer = nil
 		s.mu.Unlock()
-		_ = s.Flush() // a failed background save is logged by Flush's caller on shutdown
+		if err := s.Flush(); err != nil && s.OnError != nil {
+			s.OnError(err)
+		}
 	})
 }
 

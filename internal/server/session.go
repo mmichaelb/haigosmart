@@ -45,6 +45,11 @@ type session struct {
 	pendingSeq map[string]*pendingCommand // keyed by seq, matched by the state report
 	closed     bool
 	keepAliv   time.Duration
+	// reported records whether this connection has produced a state report yet.
+	// The first one is always published, even when it changes nothing: it is
+	// the bulb confirming what it is, which is different information from a
+	// value the registry remembered across a restart.
+	reported bool
 }
 
 // DeviceID implements bulb.Driver.
@@ -154,6 +159,10 @@ func (s *session) serve(ctx context.Context) {
 	defer stop()
 
 	connect, err := s.handshake()
+	if errors.Is(err, errNotConfigured) {
+		s.reportRejection()
+		return
+	}
 	if err != nil {
 		s.srv.publish(events.Event{
 			At: s.srv.now(), Kind: events.ProtocolError,
@@ -209,6 +218,15 @@ func (s *session) handshake() (protocol.Connect, error) {
 		s.keepAliv = time.Duration(connect.KeepAlive) * time.Second
 	}
 
+	// Admission is decided here and nowhere else: after the identity exists,
+	// and before the CONNACK and before anything is written to the registry, so
+	// a refused bulb leaves nothing behind. It is told why — MQTT 3.1.1 has a
+	// return code for exactly this — rather than having its socket dropped.
+	if s.srv.Admit != nil && !s.srv.Admit(identity.DeviceName) {
+		_ = s.write(protocol.ConnackRefusedNotAuthorized)
+		return protocol.Connect{}, errNotConfigured
+	}
+
 	// We are the authority now, so we accept the bulb's credentials rather than
 	// verifying an HMAC over a vendor secret we do not have. This is the whole
 	// point of the replacement server, and it is safe on the trusted LAN the
@@ -218,6 +236,10 @@ func (s *session) handshake() (protocol.Connect, error) {
 	}
 	return connect, nil
 }
+
+// errNotConfigured is a bulb the server has not been configured to serve. It is
+// not a protocol error and must not be reported as one.
+var errNotConfigured = errors.New("bulb is not in the configured lamp set")
 
 // event builds an event tagged with this session's bulb, reading the display
 // name from the registry rather than from a stale local copy.
@@ -260,6 +282,24 @@ func (s *session) register(connect protocol.Connect) {
 		kind = events.Discovered
 	}
 	s.srv.publish(s.event(kind, ""))
+}
+
+// reportRejection publishes a refusal, at most once per window per device id.
+// The bulb reconnects indefinitely, so reporting every attempt would drown the
+// record stream in the one thing the operator already knows.
+func (s *session) reportRejection() {
+	now := s.srv.now()
+	report, suppressed, since := s.srv.noteRejection(s.DeviceID(), now)
+	if !report {
+		return
+	}
+	detail := s.conn.RemoteAddr().String()
+	if suppressed > 0 {
+		detail = fmt.Sprintf("%s (%d attempts since %s)", detail, suppressed, since.Format("15:04:05"))
+	}
+	s.srv.publish(events.Event{
+		At: now, Kind: events.Rejected, DeviceID: s.DeviceID(), Detail: detail,
+	})
 }
 
 func (s *session) reportDisconnect(err error) {
@@ -381,7 +421,18 @@ func (s *session) handlePropertyPost(pub protocol.Publish, now time.Time) error 
 	s.srv.reg.SetCapabilities(s.DeviceID(), protocol.RefineFromReport(current.Capabilities, post))
 
 	next := post.Apply(current.State, now)
-	if changes := s.srv.reg.SetState(s.DeviceID(), next, now); len(changes) > 0 {
+	changes := s.srv.reg.SetState(s.DeviceID(), next, now)
+
+	// A report that changes nothing still matters once per connection. Anything
+	// waiting to hear that a bulb is really there — Home Assistant's
+	// availability, in particular — needs the confirmation, and a bulb whose
+	// state survived a restart unchanged would otherwise never send one.
+	s.mu.Lock()
+	first := !s.reported
+	s.reported = true
+	s.mu.Unlock()
+
+	if len(changes) > 0 || first {
 		e := s.event(events.StateChanged, "")
 		e.At, e.Changed = now, changes
 		s.srv.publish(e)
