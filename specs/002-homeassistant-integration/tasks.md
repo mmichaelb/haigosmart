@@ -178,7 +178,7 @@ confirm Home Assistant reflects the state the lamp reports on startup with no re
 - [X] T052 [P] Update `README.md`: the lamps now work from Home Assistant, with the broker named as a prerequisite
 - [X] T053 Confirm via `cmd/haigosmartd` that an unset `-mqtt-broker` leaves feature 001 behaviour untouched, and that stopping the broker leaves the terminal fully working; record the result in `docs/homeassistant.md` (FR-019, FR-021, SC-010)
 - [X] T054 Audit every user-facing string added in this feature against feature 001's `contracts/tui-commands.md` vocabulary, so the two surfaces do not drift (Constitution III)
-- [~] T055 Run the full quickstart.md validation, scenarios 1–12, against a real Home Assistant — **Gate G3, needs your broker and your Home Assistant**. Scenarios 8–11 already pass against the stub broker in `go test ./internal/hass -race`
+- [X] T055 Run the full quickstart.md validation against a real Home Assistant — **Gate G3 PASSED 2026-08-28**. The lamps appear, are controllable, and show only the controls the hardware has
 
 ---
 
@@ -238,6 +238,34 @@ The two Phase 2 halves in parallel are the whole reason this feature is not sequ
 5. Polish → docs, audit, full validation
 
 ---
+
+## Hardware bring-up (2026-08-28)
+
+**Gate G3 passed. The integration works against a real Home Assistant.** An adopted
+`headlamp` appears as a light entity with brightness and warmth and no colour wheel, under
+a `haigosmart` server device.
+
+Two defects surfaced only against the real thing, both in the device-registry relationship
+rather than in anything the payload tests could see:
+
+1. **"Unnamed device".** Every lamp declared `via_device: "haigosmart"`, which Home
+   Assistant resolves against a device's `identifiers` — and nothing had ever declared
+   them, so it invented a placeholder to hang the lamps off. MQTT discovery creates a
+   device only as a side effect of an entity, so the server now publishes a **Status**
+   connectivity sensor of its own. That sensor deliberately carries no availability topic:
+   an entity whose job is reporting the server being gone must not vanish at that moment.
+   Worth noting the shape of this bug — it is invisible in any single payload and only
+   appears when the lamp's `via_device` and the server's `identifiers` are compared, which
+   is why no unit test caught it and why one now does.
+
+2. **Devices labelled by firmware token.** Home Assistant shows the model prominently, and
+   `aigo_light_cct` was passed through raw. Models are now product names ("Tunable White
+   Smart Bulb", "Bulb Server") with the raw firmware string kept as `sw_version`.
+
+Also confirmed as intended rather than a fault: Home Assistant lists the server and each
+lamp as **separate devices**. `via_device` draws a "connected via" relationship on the
+lamp's page; it does not nest entries in the device list. The operator chose to keep both,
+so the Status sensor remains the one thing that shows whether the server itself is running.
 
 ## Notes
 

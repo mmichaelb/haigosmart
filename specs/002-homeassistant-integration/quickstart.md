@@ -25,6 +25,8 @@ Services → MQTT**, with no YAML edited by hand.
 
 ## Validation scenarios
 
+**Status: passed against a real Home Assistant on 2026-08-28 (Gate G3).**
+
 Each maps to a spec criterion. 1–7 need a real Home Assistant; the rest run in the suite.
 
 | # | Scenario | Steps | Expected | Covers |
