@@ -22,6 +22,10 @@ const (
 	CommandResult
 	ProtocolError
 	DuplicateID
+	// Renamed covers both adoption and a later rename. It exists because a lamp
+	// adopted while already connected produces no other event, and anything
+	// watching the registry would never learn the lamp had become controllable.
+	Renamed
 )
 
 // Event is a single thing that happened, ready to render or log.
@@ -65,6 +69,8 @@ func (e Event) Text() string {
 		return "protocol error: " + e.Detail
 	case DuplicateID:
 		return "WARNING duplicate device id, also seen from " + e.Detail
+	case Renamed:
+		return e.Detail
 	default:
 		parts := make([]string, 0, len(e.Changed))
 		for _, c := range e.Changed {

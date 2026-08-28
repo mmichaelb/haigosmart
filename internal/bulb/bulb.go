@@ -3,6 +3,7 @@ package bulb
 import (
 	"context"
 	"errors"
+	"strings"
 	"time"
 )
 
@@ -36,12 +37,25 @@ type Bulb struct {
 	State        LightState
 	Desired      *LightState
 	Capabilities Capabilities
-	FirstSeen    time.Time
-	LastSeen     time.Time
-	RemoteAddr   string
+	// FirmwareVersion is what the bulb reported, e.g. "aigo_light_cct_v4.0.0".
+	// Empty until it has said.
+	FirmwareVersion string
+	FirstSeen       time.Time
+	LastSeen        time.Time
+	RemoteAddr      string
 
 	// Driver is the live connection, nil when the bulb is not connected.
 	Driver Driver
+}
+
+// Model is the hardware family, derived from the firmware version by trimming
+// the version suffix: "aigo_light_cct_v4.0.0" becomes "aigo_light_cct".
+func (b *Bulb) Model() string {
+	v := b.FirmwareVersion
+	if i := strings.LastIndex(v, "_v"); i > 0 {
+		return v[:i]
+	}
+	return v
 }
 
 // Adopted reports whether the operator has taken ownership of this bulb.

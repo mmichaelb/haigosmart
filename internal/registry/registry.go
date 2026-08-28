@@ -219,6 +219,20 @@ func (r *Registry) Touch(deviceID string, now time.Time) {
 	}
 }
 
+// SetFirmware records the version string a bulb reported. It is displayed on
+// the Home Assistant device card and is where the model name comes from.
+func (r *Registry) SetFirmware(deviceID, version string) {
+	if version == "" {
+		return
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if b, ok := r.bulbs[deviceID]; ok && b.FirmwareVersion != version {
+		b.FirmwareVersion = version
+		r.dirty()
+	}
+}
+
 // SetCapabilities records what a bulb can do. It never downgrades a known
 // answer to an unknown one: a later connection that could not classify the bulb
 // must not erase what an earlier one established. It reports whether anything

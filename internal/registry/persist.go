@@ -28,6 +28,7 @@ type storedBulb struct {
 	FirstSeen    time.Time         `json:"first_seen"`
 	LastSeen     time.Time         `json:"last_seen"`
 	Capabilities bulb.Capabilities `json:"capabilities"`
+	Firmware     string            `json:"firmware,omitempty"`
 	State        bulb.LightState   `json:"state"`
 }
 
@@ -99,13 +100,14 @@ func (s *Store) Load() (*Registry, error) {
 		// across a restart. Everything loads disconnected and proves otherwise
 		// by connecting.
 		reg.bulbs[sb.DeviceID] = &bulb.Bulb{
-			DeviceID:     sb.DeviceID,
-			Name:         sb.Name,
-			Status:       bulb.Disconnected,
-			State:        sb.State,
-			Capabilities: sb.Capabilities,
-			FirstSeen:    sb.FirstSeen,
-			LastSeen:     sb.LastSeen,
+			DeviceID:        sb.DeviceID,
+			Name:            sb.Name,
+			Status:          bulb.Disconnected,
+			State:           sb.State,
+			Capabilities:    sb.Capabilities,
+			FirmwareVersion: sb.Firmware,
+			FirstSeen:       sb.FirstSeen,
+			LastSeen:        sb.LastSeen,
 		}
 	}
 	return reg, nil
@@ -152,6 +154,7 @@ func (s *Store) save(reg *Registry) error {
 			FirstSeen:    b.FirstSeen,
 			LastSeen:     b.LastSeen,
 			Capabilities: b.Capabilities,
+			Firmware:     b.FirmwareVersion,
 			State:        b.State,
 		})
 	}

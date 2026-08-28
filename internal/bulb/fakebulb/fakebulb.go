@@ -9,7 +9,6 @@ package fakebulb
 import (
 	"bufio"
 	"crypto/tls"
-	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -172,26 +171,17 @@ func (b *Bulb) handshake() error {
 }
 
 func (b *Bulb) encodeConnect() []byte {
-	clientID := fmt.Sprintf("%s.%s|securemode=2,tokenType=0,_v=sdk-c-2.3.0,authtype=custom-ilop|",
-		b.opts.ProductKey, b.opts.DeviceName)
-	username := b.opts.DeviceName + "&" + b.opts.ProductKey
-
-	body := []byte{0, 4, 'M', 'Q', 'T', 'T', 4, 0xc0}
-	body = binary.BigEndian.AppendUint16(body, b.opts.KeepAlive)
-	for _, s := range []string{clientID, username, "fakebulbpassword"} {
-		body = binary.BigEndian.AppendUint16(body, uint16(len(s)))
-		body = append(body, s...)
-	}
-	return protocol.Encode(protocol.TypeConnect, 0, body)
+	return protocol.EncodeConnect(protocol.ConnectOptions{
+		ClientID: fmt.Sprintf("%s.%s|securemode=2,tokenType=0,_v=sdk-c-2.3.0,authtype=custom-ilop|",
+			b.opts.ProductKey, b.opts.DeviceName),
+		KeepAlive: b.opts.KeepAlive,
+		Username:  b.opts.DeviceName + "&" + b.opts.ProductKey,
+		Password:  "fakebulbpassword",
+	})
 }
 
 func (b *Bulb) subscribe() error {
-	topic := b.topic("thing/event/+/post_reply")
-	body := binary.BigEndian.AppendUint16(nil, 1)
-	body = binary.BigEndian.AppendUint16(body, uint16(len(topic)))
-	body = append(body, topic...)
-	body = append(body, 0)
-	return b.send(protocol.Encode(protocol.TypeSubscribe, 2, body))
+	return b.send(protocol.EncodeSubscribe(1, 0, b.topic("thing/event/+/post_reply")))
 }
 
 func (b *Bulb) informVersion() error {

@@ -353,6 +353,7 @@ func (s *session) handlePublish(pub protocol.Publish, now time.Time) error {
 
 	case strings.Contains(pub.Topic, protocol.SuffixOTAInform):
 		if version := protocol.DecodeOTAVersion(pub.Payload); version != "" {
+			s.srv.reg.SetFirmware(s.DeviceID(), version)
 			s.srv.reg.SetCapabilities(s.DeviceID(), protocol.CapabilitiesFromVersion(version))
 		}
 		return nil

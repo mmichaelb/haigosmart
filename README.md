@@ -53,12 +53,27 @@ Brightness changes fade, and the bulb reports only once the fade finishes — up
 to about four seconds for a large swing. The interface stays responsive
 throughout; `-command-timeout` adjusts the limit.
 
+## Home Assistant
+
+The lamps work from Home Assistant as ordinary light entities — dashboards,
+automations, voice. You need an MQTT broker (the Mosquitto add-on); this project
+publishes to it and Home Assistant discovers the lamps on its own.
+
+```bash
+./haigosmartd -mqtt-broker 192.168.1.10:1883
+```
+
+A white-only lamp shows brightness and warmth and no colour wheel, because the
+entity only claims what the hardware has. See
+[docs/homeassistant.md](docs/homeassistant.md).
+
 ## Docs
 
 - [docs/operating.md](docs/operating.md) — running it, systemd, verifying no
   traffic escapes, recovering a corrupt registry
 - [docs/capture-setup.md](docs/capture-setup.md) — how the protocol was worked
   out, and how to do it for another model
+- [docs/homeassistant.md](docs/homeassistant.md) — broker setup, adoption, availability, diagnosis
 - [docs/performance.md](docs/performance.md) — benchmark and soak baselines
 - [specs/001-local-bulb-server/](specs/001-local-bulb-server/) — spec, plan,
   and the protocol contract
@@ -71,4 +86,6 @@ make bench     # benchmarks
 ```
 
 Built with the Go standard library throughout; the only dependency is Bubble Tea,
-and only `internal/tui` imports it.
+and only `internal/tui` imports it. The MQTT client is written against the same
+codec that serves the bulbs, so the Home Assistant integration added no
+dependencies at all.

@@ -18,6 +18,9 @@ import (
 
 	"haigosmart/internal/control"
 	"haigosmart/internal/events"
+	"haigosmart/internal/hass"
+	"haigosmart/internal/lights"
+	"haigosmart/internal/mqtt"
 	"haigosmart/internal/registry"
 	"haigosmart/internal/server"
 	"haigosmart/internal/tui"
@@ -43,8 +46,23 @@ func run() error {
 		verbose     = flag.Bool("v", false, "debug logging, including per-frame protocol traces")
 		cmdTimeout  = flag.Duration("command-timeout", control.CommandTimeout,
 			"how long to wait for a bulb to confirm a command; bulbs that fade report only once the fade finishes")
+
+		mqttBroker  = flag.String("mqtt-broker", "", "host:port of your MQTT broker; empty disables the Home Assistant integration")
+		mqttUser    = flag.String("mqtt-username", "", "broker username, if the broker needs one")
+		mqttPass    = flag.String("mqtt-password", "", "broker password, if the broker needs one")
+		mqttClient  = flag.String("mqtt-client-id", "haigosmart", "client id presented to the broker")
+		mqttPrefix  = flag.String("mqtt-prefix", "haigosmart", "base topic for state, availability and commands")
+		discPrefix  = flag.String("mqtt-discovery-prefix", "homeassistant", "Home Assistant discovery prefix")
+		ctMinKelvin = flag.Int("ct-min-kelvin", 2700, "Kelvin at the lamp's warmest setting")
+		ctMaxKelvin = flag.Int("ct-max-kelvin", 6500, "Kelvin at the lamp's coolest setting")
 	)
 	flag.Parse()
+
+	// An inverted Kelvin range would silently reverse every warmth value shown
+	// in Home Assistant, so it is refused rather than accepted and worked around.
+	if *ctMinKelvin >= *ctMaxKelvin {
+		return fmt.Errorf("-ct-min-kelvin (%d) must be below -ct-max-kelvin (%d)", *ctMinKelvin, *ctMaxKelvin)
+	}
 
 	logFile, logger, err := newLogger(*logPath, *headless, *verbose)
 	if err != nil {
@@ -67,14 +85,45 @@ func run() error {
 
 	bus := events.NewBus(logger)
 	srv := server.New(reg, bus, filepath.Join(filepath.Dir(*registryArg), "tls.key"))
-	ctrl := control.New(reg, bus)
-	ctrl.SetTimeout(*cmdTimeout)
+	svc := lights.New(reg, bus)
+	svc.SetTimeout(*cmdTimeout)
+	ctrl := control.New(svc, reg)
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 
 	serverErr := make(chan error, 1)
 	go func() { serverErr <- srv.ListenAndServe(ctx, *addr) }()
+
+	// The Home Assistant bridge is optional and must never be able to stop the
+	// server starting: a broker that is down is a broker problem, and the lamps
+	// keep working from the terminal regardless.
+	if *mqttBroker != "" {
+		hassCfg := hass.Config{
+			DiscoveryPrefix: *discPrefix,
+			Prefix:          *mqttPrefix,
+			MinKelvin:       *ctMinKelvin,
+			MaxKelvin:       *ctMaxKelvin,
+		}
+		var bridge *hass.Bridge
+		client := mqtt.New(mqtt.Options{
+			Broker:      *mqttBroker,
+			ClientID:    *mqttClient,
+			Username:    *mqttUser,
+			Password:    *mqttPass,
+			WillTopic:   hassCfg.StatusTopic(),
+			WillPayload: []byte(hass.Offline),
+			WillRetain:  true,
+			Logger:      logger,
+			OnConnect:   func() { bridge.OnConnect() },
+		})
+		bridge = hass.New(hassCfg, svc, client, logger)
+
+		go func() { _ = client.Run(ctx) }()
+		go func() { _ = bridge.Run(ctx) }()
+		logger.Info("home assistant integration enabled", "broker", *mqttBroker,
+			"kelvin_range", fmt.Sprintf("%d-%d", *ctMinKelvin, *ctMaxKelvin))
+	}
 
 	if *headless {
 		logger.Info("listening for bulbs", "addr", *addr, "registry", *registryArg)

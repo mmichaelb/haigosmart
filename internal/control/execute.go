@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"haigosmart/internal/bulb"
-	"haigosmart/internal/events"
+	"haigosmart/internal/lights"
 	"haigosmart/internal/registry"
 )
 
@@ -69,26 +69,25 @@ func infof(format string, args ...any) Result {
 	return Result{Kind: ResultInfo, Text: fmt.Sprintf(format, args...)}
 }
 
-// Controller executes commands against the registry.
+// Controller is the terminal's adapter over lights.Service. It owns parsing,
+// target resolution by name or prefix, and rendering — and nothing else. The
+// logic of changing a lamp lives in the service, where Home Assistant reaches it
+// too.
 type Controller struct {
-	reg     *registry.Registry
-	bus     *events.Bus
-	timeout time.Duration
+	svc *lights.Service
+	reg *registry.Registry
 }
 
-// New returns a controller.
-func New(reg *registry.Registry, bus *events.Bus) *Controller {
-	return &Controller{reg: reg, bus: bus, timeout: CommandTimeout}
+// New returns a controller over the given service. The registry is still needed
+// here for the things that are genuinely terminal concerns: resolving a typed
+// prefix to a lamp, and renaming.
+func New(svc *lights.Service, reg *registry.Registry) *Controller {
+	return &Controller{svc: svc, reg: reg}
 }
 
 // SetTimeout overrides how long a command waits for a bulb to confirm.
 // A non-positive duration restores the default.
-func (c *Controller) SetTimeout(d time.Duration) {
-	if d <= 0 {
-		d = CommandTimeout
-	}
-	c.timeout = d
-}
+func (c *Controller) SetTimeout(d time.Duration) { c.svc.SetTimeout(d) }
 
 // Execute parses and runs one line of operator input.
 func (c *Controller) Execute(ctx context.Context, line string) Result {
@@ -113,43 +112,26 @@ func (c *Controller) Run(ctx context.Context, cmd Command) Result {
 		return Result{Kind: ResultOK, Text: "shutting down", Quit: true}
 	}
 
+	// Prefix and name matching stay here. A human is typing; an integration is
+	// not, and lights.Service deliberately refuses to guess.
 	target, err := c.reg.Resolve(cmd.Target)
 	if err != nil {
 		return Result{Kind: ResultError, Text: err.Error()}
 	}
 
-	if cmd.Action == ActionInfo {
+	switch cmd.Action {
+	case ActionInfo:
 		return c.info(target)
-	}
-	if cmd.Action == ActionName {
+	case ActionName:
 		return c.rename(target, cmd.Text)
 	}
 
-	// Everything past here changes bulb state, so the bulb must be adopted and
-	// online first.
-	if !target.Adopted() {
-		return errf("%s: not adopted yet. run `name %s <a-name>` first", target.DeviceID, target.DeviceID)
-	}
-	if target.Status != bulb.Connected {
-		return errf("%s: not connected (last seen %s). check the bulb has power",
-			target.Name, target.LastSeen.Format("15:04:05"))
-	}
-
-	want, res := desiredState(target, cmd)
+	change, res := changeFor(target, cmd)
 	if res != nil {
 		return *res
 	}
 
-	driver := c.reg.Driver(target.DeviceID)
-	if driver == nil {
-		return errf("%s: not connected. check the bulb has power", target.Name)
-	}
-	c.reg.SetDesired(target.DeviceID, want)
-
-	applyCtx, cancel := context.WithTimeout(ctx, c.timeout)
-	defer cancel()
-	err = driver.Apply(applyCtx, want)
-	switch {
+	switch err := c.svc.Apply(ctx, target.DeviceID, change); {
 	case err == nil:
 		return okf("%s: %s", target.Name, describe(cmd))
 
@@ -161,66 +143,76 @@ func (c *Controller) Run(ctx context.Context, cmd Command) Result {
 			target.Name, describe(cmd))
 
 	default:
-		c.bus.Publish(events.Event{
-			At: time.Now(), Kind: events.CommandResult,
-			DeviceID: target.DeviceID, Name: target.Name, Detail: err.Error(),
-		})
+		return c.renderError(target, err)
+	}
+}
+
+// renderError turns a typed service error into the terminal's wording. This is
+// the whole reason the service returns types rather than strings: Home
+// Assistant renders the same errors completely differently.
+func (c *Controller) renderError(target bulb.Bulb, err error) Result {
+	switch {
+	case errors.Is(err, lights.ErrNotAdopted):
+		return errf("%s: not adopted yet. run `name %s <a-name>` first", target.DeviceID, target.DeviceID)
+	case errors.Is(err, lights.ErrNotConnected):
+		return errf("%s: not connected (last seen %s). check the bulb has power",
+			target.Name, target.LastSeen.Format("15:04:05"))
+	case errors.Is(err, bulb.ErrUnsupported):
+		return errf("%s: does not support colour temperature. this bulb accepts `on`, `off`, `bri`", target.Name)
+	default:
+		var re lights.RangeError
+		if errors.As(err, &re) {
+			return Result{Kind: ResultError, Text: re.Error()}
+		}
 		return errf("%s: %v", target.Name, err)
 	}
 }
 
-// desiredState builds the state a command asks for, validating it first. A
-// non-nil Result means the command was refused and nothing was sent.
-func desiredState(target bulb.Bulb, cmd Command) (bulb.LightState, *Result) {
-	want := target.State
+// changeFor turns a parsed command into a service change, applying the checks
+// that are about the terminal's own vocabulary rather than about the lamp. A
+// non-nil Result means the command was refused before it reached the service.
+func changeFor(target bulb.Bulb, cmd Command) (lights.Change, *Result) {
+	var change lights.Change
 	switch cmd.Action {
 	case ActionOn:
-		want.Power = true
-		if want.Brightness == 0 {
-			// A bulb that has never reported brightness would otherwise be told
-			// to turn on at zero, which reads as "still off".
-			want.Brightness = 100
-		}
+		on := true
+		change.Power = &on
 	case ActionOff:
-		want.Power = false
+		off := false
+		change.Power = &off
 	case ActionBrightness:
 		if cmd.Number < 0 || cmd.Number > 100 {
 			r := errf("brightness must be 0-100, got %d", cmd.Number)
-			return want, &r
+			return change, &r
 		}
-		floor := int(target.Capabilities.MinBrightness)
-		if cmd.Number > 0 && cmd.Number < floor {
-			r := errf("%s: brightness below %d switches this bulb off. use `off` if that is what you want",
-				target.Name, floor)
-			return want, &r
-		}
-		want.Brightness = uint8(cmd.Number)
-		want.Power = cmd.Number > 0
+		pct := uint8(cmd.Number)
+		change.Brightness = &pct
 	case ActionColorTemp:
 		if cmd.Number < 0 || cmd.Number > 100 {
 			r := errf("colour temperature must be 0-100 (0 = warmest, 100 = coolest), got %d", cmd.Number)
-			return want, &r
+			return change, &r
 		}
 		if !target.Capabilities.SupportsColorTemp() {
 			r := errf("%s: does not support colour temperature. this bulb accepts `on`, `off`, `bri`", target.Name)
-			return want, &r
+			return change, &r
 		}
-		want.ColorTemp = uint8(cmd.Number)
+		pct := uint8(cmd.Number)
+		change.ColorTemp = &pct
 	case ActionColor:
 		if !validColor(cmd.Text) {
 			r := errf("colour must be #RRGGBB or a name, got %q", cmd.Text)
-			return want, &r
+			return change, &r
 		}
 		if !target.Capabilities.SupportsColor() {
 			r := errf("%s: does not support colour. this bulb accepts `on`, `off`, `bri`, `temp`", target.Name)
-			return want, &r
+			return change, &r
 		}
 		// No RGB model has been captured yet, so there is no property mapping to
-		// send. Saying so plainly beats sending nothing and reporting success.
+		// send. Saying so plainly beats reporting a success that did nothing.
 		r := errf("%s: colour is not implemented for this bulb's protocol yet. `temp` sets white warmth 0-100", target.Name)
-		return want, &r
+		return change, &r
 	}
-	return want, nil
+	return change, nil
 }
 
 func describe(cmd Command) string {
@@ -245,7 +237,7 @@ func (c *Controller) rename(target bulb.Bulb, name string) Result {
 		return errf("%q is a command name; pick something else so `%s` stays unambiguous", name, name)
 	}
 	previous := target.Name
-	adopted, err := c.reg.Rename(target.DeviceID, name)
+	adopted, err := c.svc.Rename(target.DeviceID, name)
 	if err != nil {
 		return Result{Kind: ResultError, Text: err.Error()}
 	}

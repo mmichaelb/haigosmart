@@ -1,8 +1,22 @@
 {
   "_comment": "Reference for the command-line flags; the binary is configured with flags, not this file. Copy the values you want onto the command line.",
+
   "listen": ":1883",
   "registry": "~/.config/haigosmart/registry.json",
   "log": "/var/log/haigosmart.log",
   "headless": false,
-  "verbose": false
+  "verbose": false,
+  "command-timeout": "5s",
+
+  "_home_assistant": "Optional. Leave mqtt-broker empty and none of this applies — the server behaves exactly as it does without Home Assistant. YOU RUN THE BROKER: install the Mosquitto add-on (or any MQTT broker) on your Home Assistant instance; this project does not provide one. The lamps never talk to the broker, only this server does.",
+  "mqtt-broker": "",
+  "mqtt-username": "",
+  "mqtt-password": "",
+  "mqtt-client-id": "haigosmart",
+  "mqtt-prefix": "haigosmart",
+  "mqtt-discovery-prefix": "homeassistant",
+
+  "_colour_temperature": "The lamps report warmth as a percentage and never state the Kelvin endpoints. 2700-6500 is correct for the aigo_light_cct_v4.0.0; a different model with different endpoints would need these changed.",
+  "ct-min-kelvin": 2700,
+  "ct-max-kelvin": 6500
 }

@@ -232,6 +232,151 @@ var (
 	Pingresp = []byte{TypePingresp << 4, 0}
 )
 
+// ConnectOptions are the fields a client presents in a CONNECT packet.
+//
+// The will is what makes availability reporting honest: the broker publishes it
+// if the connection dies without a DISCONNECT, which is the case a graceful
+// shutdown handler cannot cover.
+type ConnectOptions struct {
+	ClientID  string
+	KeepAlive uint16
+	Username  string
+	Password  string
+
+	WillTopic   string
+	WillPayload []byte
+	WillRetain  bool
+	WillQoS     byte
+
+	CleanSession bool
+}
+
+// EncodeConnect builds a CONNECT packet. Empty optional fields are omitted
+// rather than sent blank, because some brokers reject a present-but-empty
+// username outright.
+func EncodeConnect(o ConnectOptions) []byte {
+	var flags byte
+	if o.CleanSession {
+		flags |= 0x02
+	}
+	if o.WillTopic != "" {
+		flags |= 0x04 | (o.WillQoS&3)<<3
+		if o.WillRetain {
+			flags |= 0x20
+		}
+	}
+	if o.Password != "" {
+		flags |= 0x40
+	}
+	if o.Username != "" {
+		flags |= 0x80
+	}
+
+	body := []byte{0, 4, 'M', 'Q', 'T', 'T', 4, flags}
+	body = binary.BigEndian.AppendUint16(body, o.KeepAlive)
+	body = appendString(body, o.ClientID)
+	if o.WillTopic != "" {
+		body = appendString(body, o.WillTopic)
+		body = binary.BigEndian.AppendUint16(body, uint16(len(o.WillPayload)))
+		body = append(body, o.WillPayload...)
+	}
+	if o.Username != "" {
+		body = appendString(body, o.Username)
+	}
+	if o.Password != "" {
+		body = appendString(body, o.Password)
+	}
+	return Encode(TypeConnect, 0, body)
+}
+
+// EncodeSubscribe builds a SUBSCRIBE packet requesting the given QoS for each
+// topic filter.
+func EncodeSubscribe(packetID uint16, qos byte, topics ...string) []byte {
+	body := binary.BigEndian.AppendUint16(nil, packetID)
+	for _, topic := range topics {
+		body = appendString(body, topic)
+		body = append(body, qos)
+	}
+	// SUBSCRIBE reserves flag bits 0010 (MQTT 3.1.1 section 3.8.1).
+	return Encode(TypeSubscribe, 2, body)
+}
+
+// EncodeDisconnect builds a DISCONNECT packet. Sending one tells the broker the
+// departure was deliberate, so it does not publish the will.
+func EncodeDisconnect() []byte { return Encode(TypeDisconnect, 0, nil) }
+
+// EncodePublishQoS1 builds a PUBLISH carrying a packet id, for delivery the
+// broker must acknowledge.
+func EncodePublishQoS1(topic string, payload []byte, packetID uint16, retain bool) []byte {
+	body := appendString(make([]byte, 0, len(topic)+len(payload)+4), topic)
+	body = binary.BigEndian.AppendUint16(body, packetID)
+	body = append(body, payload...)
+	var flags byte = 1 << 1 // QoS 1
+	if retain {
+		flags |= 1
+	}
+	return Encode(TypePublish, flags, body)
+}
+
+// EncodePublishRetained builds a QoS 0 PUBLISH with the retain flag set. A
+// retained message is what lets a subscriber that connects later still see the
+// current value.
+func EncodePublishRetained(topic string, payload []byte) []byte {
+	body := appendString(make([]byte, 0, len(topic)+len(payload)+2), topic)
+	return Encode(TypePublish, 1, append(body, payload...))
+}
+
+// Retained reports whether a PUBLISH packet had its retain flag set.
+func (p Packet) Retained() bool { return p.Flags&1 != 0 }
+
+// ConnackReturnCode values defined by MQTT 3.1.1 section 3.2.2.2.
+const (
+	ConnackAcceptedCode         = 0
+	ConnackUnacceptableProtocol = 1
+	ConnackIdentifierRejected   = 2
+	ConnackServerUnavailable    = 3
+	ConnackBadCredentials       = 4
+	ConnackNotAuthorized        = 5
+)
+
+// ConnackReason turns a CONNACK return code into something worth putting in a
+// log line. A broker that rejects us should not look like a network failure.
+func ConnackReason(code byte) string {
+	switch code {
+	case ConnackAcceptedCode:
+		return "accepted"
+	case ConnackUnacceptableProtocol:
+		return "broker refused the protocol version"
+	case ConnackIdentifierRejected:
+		return "broker rejected the client id"
+	case ConnackServerUnavailable:
+		return "broker unavailable"
+	case ConnackBadCredentials:
+		return "broker rejected the username or password"
+	case ConnackNotAuthorized:
+		return "not authorised by the broker"
+	default:
+		return fmt.Sprintf("broker refused the connection with code %d", code)
+	}
+}
+
+// DecodeConnack returns the session-present flag and the return code.
+func DecodeConnack(payload []byte) (sessionPresent bool, code byte, err error) {
+	if len(payload) < 2 {
+		return false, 0, errors.New("mqtt: connack truncated")
+	}
+	return payload[0]&1 != 0, payload[1], nil
+}
+
+// DecodeSuback returns the packet id and the granted QoS per requested filter.
+// A granted value of 0x80 means the broker refused that subscription.
+func DecodeSuback(payload []byte) (packetID uint16, granted []byte, err error) {
+	if len(payload) < 3 {
+		return 0, nil, errors.New("mqtt: suback truncated")
+	}
+	return binary.BigEndian.Uint16(payload), payload[2:], nil
+}
+
 // EncodeSuback grants QoS 0 for each of n requested topic filters.
 func EncodeSuback(packetID uint16, n int) []byte {
 	body := binary.BigEndian.AppendUint16(make([]byte, 0, 2+n), packetID)

@@ -14,6 +14,7 @@ import (
 	"haigosmart/internal/bulb"
 	"haigosmart/internal/control"
 	"haigosmart/internal/events"
+	"haigosmart/internal/lights"
 	"haigosmart/internal/registry"
 )
 
@@ -23,7 +24,7 @@ func newModel(t *testing.T) (*Model, *registry.Registry, *events.Bus) {
 	reg := registry.New(nil)
 	sub := bus.Subscribe(64)
 	t.Cleanup(sub.Close)
-	m := New(control.New(reg, bus), reg, sub, func() {})
+	m := New(control.New(lights.New(reg, bus), reg), reg, sub, func() {})
 	m.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
 	return m, reg, bus
 }
@@ -192,7 +193,7 @@ func TestStatusBarReportsDroppedEvents(t *testing.T) {
 	reg := registry.New(nil)
 	sub := bus.Subscribe(1) // deliberately tiny
 	defer sub.Close()
-	m := New(control.New(reg, bus), reg, sub, func() {})
+	m := New(control.New(lights.New(reg, bus), reg), reg, sub, func() {})
 	m.Update(tea.WindowSizeMsg{Width: 120, Height: 24})
 
 	// Nothing reads the subscription, so the queue overflows.
@@ -226,7 +227,7 @@ func TestQuitCancelsTheServer(t *testing.T) {
 	sub := bus.Subscribe(8)
 	defer sub.Close()
 	ctx, cancel := context.WithCancel(context.Background())
-	m := New(control.New(reg, bus), reg, sub, cancel)
+	m := New(control.New(lights.New(reg, bus), reg), reg, sub, cancel)
 	m.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
 
 	typeLine(m, "quit")
@@ -243,7 +244,7 @@ func TestCtrlCQuits(t *testing.T) {
 	reg := registry.New(nil)
 	sub := bus.Subscribe(8)
 	defer sub.Close()
-	m := New(control.New(reg, bus), reg, sub, cancel)
+	m := New(control.New(lights.New(reg, bus), reg), reg, sub, cancel)
 	m.Update(tea.KeyMsg{Type: tea.KeyCtrlC})
 	select {
 	case <-ctx.Done():

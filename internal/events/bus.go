@@ -125,6 +125,8 @@ func (k Kind) String() string {
 		return "protocol_error"
 	case DuplicateID:
 		return "duplicate_id"
+	case Renamed:
+		return "renamed"
 	default:
 		return "state_changed"
 	}

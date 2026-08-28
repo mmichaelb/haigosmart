@@ -12,6 +12,7 @@ import (
 	"haigosmart/internal/bulb"
 	"haigosmart/internal/bulb/fakebulb"
 	"haigosmart/internal/events"
+	"haigosmart/internal/lights"
 	"haigosmart/internal/registry"
 	"haigosmart/internal/server"
 )
@@ -123,7 +124,7 @@ func newHarness(t *testing.T, opts fakebulb.Options) *harness {
 		cancel()
 		<-done
 	})
-	h := &harness{ctrl: New(reg, bus), reg: reg, bus: bus, fb: fb}
+	h := &harness{ctrl: New(lights.New(reg, bus), reg), reg: reg, bus: bus, fb: fb}
 	waitFor(t, "the bulb to register", func() bool {
 		b, ok := reg.View(fb.DeviceID())
 		return ok && b.Capabilities.Known
