@@ -93,7 +93,7 @@ fix it, watch it pass. [quickstart.md](quickstart.md) scenario 5.
 - [X] T014 [US2] Make the format step name the offending files rather than only exiting non-zero, so a failure is actionable without reproducing it locally (FR-010)
 - [X] T015 [US2] Add a cross-compile job to `.github/workflows/ci.yml` building all six targets with `CGO_ENABLED=0`. This is the only check that catches a change working on the maintainer's macOS ARM machine while breaking the Windows or Linux artefact — and it catches it at pull-request time rather than mid-release (data-model.md, Check run)
 - [X] T016 [US2] Set explicit least-privilege `permissions: contents: read` on the CI workflow, so a fork's pull request reaches no credential (FR-009)
-- [X] T017 [P] [US2] Add `.github/dependabot.yml` covering `github-actions` and `gomod`, so the actions this feature depends on stay current without anyone remembering to look
+- [X] T017 [P] [US2] Dependency updates: **nothing to add.** Renovate is already configured at the account level and onboards new repositories on its own, so a `dependabot.yml` here would be a second bot raising the same pull requests. Removed after being written (2026-08-29)
 
 **Checkpoint**: no unchecked change can merge. **G2** is provable once the repository is on GitHub.
 

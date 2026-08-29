@@ -160,7 +160,6 @@ specs/004-public-release-automation/
 ├── workflows/
 │   ├── ci.yml                 # exists; extended to run on pull requests explicitly
 │   └── release.yml            # new: the single release job
-├── dependabot.yml             # new: keeps the actions themselves current
 └── CONTRIBUTING.md            # new: commit convention and what CI enforces
 
 .goreleaser.yaml               # new: builds, archives, checksums, image, release

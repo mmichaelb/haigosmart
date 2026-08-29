@@ -67,12 +67,12 @@ nothing here is published to npm, and `.releaserc.json` declares an explicit `pl
 so the default `@semantic-release/npm` plugin never loads.
 
 **The costs, stated rather than buried**: three files in a Go repository that are not Go, a
-language breakdown on GitHub that will show JavaScript, and one more Dependabot ecosystem to
-review.
+language breakdown on GitHub that will show JavaScript, and one more ecosystem for Renovate to
+raise pull requests against.
 
 **Revisit trigger**: if the npm dependency graph becomes a maintenance burden, the documented
-form is a small deletion — remove `package.json`, `package-lock.json`, the npm Dependabot
-entry, and the `node_modules` ignore line, then run
+form is a small deletion — remove `package.json`, `package-lock.json`, the npm entry from the
+Renovate configuration if one is added, and the `node_modules` ignore line, then run
 `npx --package semantic-release@25 --package @semantic-release/exec@7 semantic-release`. Direct
 versions stay pinned; only the transitive graph floats.
 
