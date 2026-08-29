@@ -74,6 +74,7 @@ assets and its image are both actually there.
 | Draft release, red job | Something after the binaries failed, usually the image push | Read the log, fix, re-run. The draft is replaced |
 | arm64 image times out | Building under emulation is slow | Re-run. If it recurs, the arm64 image build needs a native runner |
 | Release notes are empty | Every commit matched an excluded type | Expected — nothing user-facing shipped |
+| `goreleaser: not found` | The install step was removed or reordered after the release step | GoReleaser is installed by `goreleaser/goreleaser-action` in `install-only` mode and must come before the step running semantic-release, which shells out to it |
 
 ## Versions
 
@@ -136,6 +137,17 @@ an explicit `plugins` array, so `@semantic-release/npm` never loads.
 
 If this ever becomes more trouble than it is worth, the documented form is a deletion — see
 `specs/004-public-release-automation/research.md` §1.
+
+## Pinned versions
+
+Two things are pinned to exact versions rather than floating: GoReleaser, in
+`release.yml`, and semantic-release with its plugins, in `package.json` with
+`package-lock.json` fixing the whole graph. Both are the versions the pipeline was
+actually verified against.
+
+The cost is that they need updating deliberately — Renovate raises those pull
+requests. The alternative is a release whose behaviour changes with no commit to
+this repository, which is a poor trade for a job holding write tokens.
 
 ## Running the pipeline locally
 

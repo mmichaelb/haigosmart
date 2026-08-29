@@ -358,6 +358,25 @@ The pattern is the one this project keeps producing, and it is why the plan
 refused to unit-test the pipeline: a configuration that validates is not an image
 that runs, and no amount of schema checking would have surfaced any of the three.
 
+### A fourth defect, found on the first real run
+
+**`goreleaser: not found`.** The workflow installed Go, Node, QEMU, Buildx, and
+logged in to the registry — and never installed GoReleaser itself. Because
+semantic-release shells out to it from its publish phase, the failure surfaced as
+a shell error nested inside a Node stack trace, several layers from its cause.
+Fixed with `goreleaser/goreleaser-action@v6` in `install-only` mode, pinned to
+2.18.0 — the version everything above was verified against.
+
+Nothing local could have caught this: GoReleaser is on this machine, so every
+local run found it. It is the same class as the other three — the configuration
+was valid, the environment was not — and it is why T049 says to *watch* the first
+release rather than check the outcome afterwards.
+
+The runner's toolchain is now complete: git, Go, Node, Docker with Buildx, QEMU,
+GoReleaser, and the `gh` CLI, which `ubuntu-latest` provides. GoReleaser inherits
+`GITHUB_TOKEN` from the step that invokes semantic-release, so it can create the
+release.
+
 ### Verified rather than assumed
 
 - History: 172 files ever added, zero credential, capture, or key hits (T001)
