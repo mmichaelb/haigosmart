@@ -292,12 +292,48 @@ for. The practical consequence is worth documenting for contributors: a fix land
 a release.
 
 **The first release** is a real decision, not a default to stumble into. With no previous tag,
-semantic-release produces `1.0.0`. For a project supporting two lamp models on hardware the
-maintainer owns, `1.0.0` claims a stability commitment that is not intended yet. Starting at
-`0.1.0` instead — by tagging `v0.1.0` before the first automated run — keeps semver's own
-rule that pre-1.0 makes no compatibility promise, and lets `feat:` commits bump the minor
-without implying a breaking-change budget. This is gate **G3** in
-[quickstart.md](quickstart.md), decided deliberately at the moment of publication.
+semantic-release produces `1.0.0`. The plan was to start at `0.1.0` instead — by tagging
+`v0.1.0` before the first automated run — keeping semver's rule that pre-1.0 makes no
+compatibility promise.
+
+**That did not happen** (2026-08-29). The repository was published and the first release ran
+before the tag was created, so the project's first version is `1.0.0`.
+
+It cannot be undone, and the reason is worth recording precisely, because the cause was an
+assistant action taken while trying to assess the damage.
+
+`proxy.golang.org` is fetch-on-demand: requesting a version's metadata makes the proxy retrieve
+that version from the origin and cache it permanently. Immediately after the release, the
+assistant ran
+
+```bash
+curl https://proxy.golang.org/github.com/mmichaelb/haigosmart/@v/v1.0.0.info
+```
+
+to check whether reverting to `0.x` was still possible. **That request is what made it
+impossible.** Until then the proxy almost certainly held nothing, and deleting the tag and the
+release would have worked; afterwards `@v1.0.0` resolves forever, `@latest` prefers it over any
+`0.x` published later, and reusing the number for different content produces checksum
+mismatches for anyone who fetched it.
+
+So 1.0.0 stands — not because staying is better than retreating, but because retreating stopped
+being available.
+
+**The operational lesson, which generalises well beyond versioning**: a query against
+publishing infrastructure is not a read. Module proxies, checksum databases, and package
+registries materialise state on first request. Asking whether something is published can be
+what publishes it, and no amount of care about the *release* protects against a careless
+*diagnostic*.
+
+**The process lesson**: T046 was written down, marked as one-way, and flagged twice in
+conversation, and still missed — because it was a line item in a list rather than a question
+that had to be answered before anything could proceed. A decision with a one-way door needs to
+block, not to be noted.
+
+Two one-way doors were passed through here, and the second was worse than the first: the missed
+tag was a planning slip that was still recoverable, and the diagnostic curl was an unrecoverable
+action taken *while investigating* the first. Assessing damage deserves the same caution as
+causing it.
 
 ---
 

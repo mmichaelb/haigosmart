@@ -71,17 +71,34 @@ assets and its image are both actually there.
 | No release, green job | No releasable commit — `docs:`, `chore:`, or an unconventional message | Expected. If a real fix is stuck behind a bad message, land an empty `fix:` commit |
 | Version is `0.0.0-next` or similar | GoReleaser ran without the tag visible | The ordering broke. Check that semantic-release created the tag before `publishCmd`, and that checkout used `fetch-depth: 0` |
 | Job fails on an existing tag | A re-run for a version already published | Correct behaviour. Published versions are immutable; do not delete and recreate one |
-| Draft release, red job | Something after the binaries failed, usually the image push | Read the log, fix, re-run. The draft is replaced |
+| Draft release, red job | Something after the binaries failed, usually the image push | Read the log, fix, then **dispatch** the release workflow with that tag — see below. Re-running the push does nothing |
+| Tag exists, no release at all | The run failed before GoReleaser produced anything | Same: fix, then dispatch with that tag |
 | arm64 image times out | Building under emulation is slow | Re-run. If it recurs, the arm64 image build needs a native runner |
 | Release notes are empty | Every commit matched an excluded type | Expected — nothing user-facing shipped |
 | `goreleaser: not found` | The install step was removed or reordered after the release step | GoReleaser is installed by `goreleaser/goreleaser-action` in `install-only` mode and must come before the step running semantic-release, which shells out to it |
 
 ## Versions
 
-`v0.1.0` was tagged by hand to start the project pre-1.0. Everything after it is
-computed. While the project is below 1.0, a breaking change (`!` or a
-`BREAKING CHANGE:` footer) jumps straight to `1.0.0` — worth knowing before
-writing one, since it declares the project stable as a side effect.
+Every version is computed. The first one was `1.0.0`, which is semantic-release's
+default for an initial release when no tag exists yet — not a deliberate stability
+claim, but permanent all the same.
+
+Permanent because of how `proxy.golang.org` works, which is worth knowing *before*
+you go looking at it: **the proxy fetches on demand.** Requesting a version's
+metadata makes it retrieve and cache that version indefinitely. Checking whether a
+version is published is therefore what publishes it, and afterwards `@latest`
+resolves to `v1.0.0` over any `0.x` released later. That is precisely how this
+project's 1.0 became fixed.
+
+When diagnosing a bad release, treat the module proxy, `sum.golang.org`, and any
+package registry as **write** endpoints. Read the git tags and the GitHub release
+instead — those can still be deleted.
+
+The practical consequence: a breaking change now costs a major version. `feat:`
+gives a minor, `fix:` a patch, and `!` or a `BREAKING CHANGE:` footer gives 2.0.0.
+
+**If you start another project this way, tag `v0.1.0` before the first automated
+run.** That is the only moment the choice is available.
 
 ## The image has no shell
 
@@ -137,6 +154,28 @@ an explicit `plugins` array, so `@semantic-release/npm` never loads.
 
 If this ever becomes more trouble than it is worth, the documented form is a deletion — see
 `specs/004-public-release-automation/research.md` §1.
+
+## Retrying a failed release
+
+**Re-running the push workflow does not retry a release.** Once the tag exists,
+semantic-release sees it as the latest release with nothing newer to release, so it
+stops before its publish phase and GoReleaser is never invoked. The run goes green
+having done nothing, which is the correct behaviour for an ordinary push and
+useless for a recovery.
+
+Use the dispatch path instead: run the **release** workflow manually and give it the
+tag. It checks that tag out, skips semantic-release entirely — the version already
+exists and must not be recomputed — and runs GoReleaser against it.
+
+```bash
+gh workflow run release.yml -f tag=v1.0.0
+```
+
+This is safe to repeat. The tag is not moved, the version is not recalculated, and
+a draft left by a previous attempt is replaced rather than duplicated. What it does
+**not** do is fix a release whose artefacts were already published: an existing
+version tag in the registry is immutable, so a rerun that reaches an already-pushed
+image will fail rather than overwrite it. That is the intended outcome.
 
 ## Pinned versions
 

@@ -147,13 +147,15 @@ and no release job triggered.
 
 ## Scenario 6 — The first release (FR-017, research §7)
 
-This is a decision, not an observation. Before the first automated run, tag `v0.1.0`
-deliberately, so the project starts pre-1.0 rather than accepting semantic-release's `1.0.0`
-default. Then land a `feat:` commit on the main line.
+This was meant to be a decision: tag `v0.1.0` before the first automated run, so the project
+starts pre-1.0. In the event the first release ran untagged and produced `1.0.0`, which the Go
+module proxy has cached permanently — see [research.md §7](research.md). The scenario is kept
+as written because it is the correct procedure for the next project, not because it is what
+happened here.
 
-**Expect**: a release appears with no human action after the merge; its version is `0.2.0`;
-its notes list the change; all seven assets are attached; and the image manifest resolves for
-both architectures.
+**Expect**: a release appears with no human action after the merge; its version follows from
+the commits since the previous tag; its notes list the changes; all seven assets are attached;
+and the image manifest resolves for both architectures.
 
 **G3** — the first automated release. Watch it end to end rather than checking the outcome
 afterwards: the ordering of tag creation and GoReleaser invocation is the single most likely

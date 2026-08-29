@@ -178,7 +178,7 @@ happens once. An immutable release with the wrong version is a permanent entry i
 project's history, so these tasks are deliberately separate and deliberately slow.
 
 - [ ] T045 [!] Re-run T001's history check immediately before publishing, then create the public repository and push (FR-005, SC-010)
-- [ ] T046 [!] Decide and create the first tag: `v0.1.0`, chosen so the project starts pre-1.0 rather than accepting semantic-release's `1.0.0` default, which would claim a stability commitment this project does not intend yet (research.md §7, FR-017)
+- [X] T046 [!] First tag: **missed, then made permanent.** The repository was published and the first release ran before `v0.1.0` was tagged, so semantic-release applied its no-previous-tag default of `1.0.0`. Recovery was likely still possible until a diagnostic request to `proxy.golang.org` caused the proxy to cache `v1.0.0` for good. The project starts at 1.0 (research.md §7)
 - [ ] T047 [US2] Run quickstart scenario 5: open a pull request with a misformatted file, confirm it fails, blocks, and names the file; fix it and confirm it passes. **G2**
 - [ ] T048 [US2] Enable branch protection on the main branch requiring the checks to pass, which is what turns a red result into an actual block (FR-008)
 - [ ] T049 [!] [US3] Land a `feat:` commit and **watch the release job run**, rather than checking the outcome afterwards. The ordering of tag creation and GoReleaser invocation is the most likely thing to be wrong and it is visible in the log while it happens. Expect version `0.2.0`. **G3**
@@ -186,6 +186,8 @@ project's history, so these tasks are deliberately separate and deliberately slo
 - [ ] T051 [US5] Verify `docker buildx imagetools inspect ghcr.io/mmichaelb/haigosmart:0.2.0` lists both architectures, and pull it without authenticating (FR-022)
 - [ ] T052 Verify the release is not a draft and became visible only after the image was pushed (FR-026)
 - [ ] T053 Verify immutability: re-run the release job for the published version, confirm it fails on the existing tag, and confirm the release assets and the image digest for that version are unchanged (FR-016, FR-025)
+- [X] T063 Add a `workflow_dispatch` recovery path to `.github/workflows/release.yml` taking an existing tag, checking it out, skipping semantic-release, and running GoReleaser against it. **Added during implementation**: `docs/releasing.md` told the operator to fix and re-run a failed release, and no such path existed — re-running the push is a no-op once the tag exists, because semantic-release stops before its publish phase. The documented recovery was not possible
+
 - [ ] T054 Verify the partial-failure path deliberately: point the image name at a repository the token cannot write, run a release, confirm it stays a **draft** and invisible on the releases page with a red run. Then revert. This is the one FR-026 behaviour that only appears under failure, so it has to be caused rather than waited for
 
 ---
@@ -320,10 +322,17 @@ first release rather than here.
 **FR-026 had a mechanism with nothing driving it.** `draft: true` was a task;
 un-drafting after verification was not. Added as T062.
 
-**A breaking change before 1.0 goes to 1.0.0**, not 0.2.0 — confirmed against a
-throwaway repository, not assumed. Documented in `CONTRIBUTING.md` and
-`docs/releasing.md`, because writing `!` pre-1.0 declares the project stable as a
-side effect.
+**The first release is `1.0.0` with no previous tag** — confirmed against a
+throwaway repository, and then confirmed the hard way in production. T046 existed
+to prevent it by tagging `v0.1.0` first; it was written down, flagged twice, and
+still missed, because it was an item in a list rather than a question that blocked
+progress. A one-way door needs to block, not to be noted.
+
+It then became irreversible through a second mistake, made while investigating the
+first: a `curl` to `proxy.golang.org` asking whether `v1.0.0` was cached is what
+*caused* it to be cached, since the proxy fetches on demand. Reverting to `0.x` was
+probably still possible until that request. Recorded in research.md §7 — a query
+against publishing infrastructure is not a read.
 
 **Local installation contradicts semantic-release's own documentation**, which
 recommends `npx` and advises against installing it. Deviated deliberately: the
@@ -357,6 +366,16 @@ All three passed `goreleaser check`. None survived contact with a real build.
 The pattern is the one this project keeps producing, and it is why the plan
 refused to unit-test the pipeline: a configuration that validates is not an image
 that runs, and no amount of schema checking would have surfaced any of the three.
+
+### A fifth defect: the documented recovery did not exist
+
+`docs/releasing.md` said to fix the cause of a failed release and re-run. Once a tag
+exists, that does nothing: semantic-release treats it as the latest release with
+nothing newer to release and stops before the publish phase, so GoReleaser is never
+invoked and the job goes green having done nothing.
+
+Found the only way it could be — a real release failed (the fourth defect below) and
+left `v1.0.0` tagged with no artefacts. Fixed by T063.
 
 ### A fourth defect, found on the first real run
 

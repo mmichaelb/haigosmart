@@ -129,8 +129,10 @@ An ordered identifier, derived and never chosen.
 
 **Rules**
 
-- Pre-1.0 to start (`v0.1.0`), a deliberate choice recorded in
-  [research.md §7](research.md) rather than accepting semantic-release's `1.0.0` default.
+- The first version was `1.0.0` — semantic-release's default with no previous tag. The plan
+  called for `v0.1.0` and it was not tagged in time. It became permanent when a diagnostic
+  request to `proxy.golang.org` caused the proxy to cache `v1.0.0`; see
+  [research.md §7](research.md), which records that cause rather than glossing it.
 - The unrecognised case must not fail the merge and must not guess. Silence is the correct
   behaviour and the cost — an unconventionally-worded fix does not ship until a later commit
   triggers a release — is documented for contributors rather than engineered around.

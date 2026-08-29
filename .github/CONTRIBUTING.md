@@ -57,9 +57,9 @@ If it matters:
 git commit --allow-empty -m "fix: report the state correctly on reconnect"
 ```
 
-**While the project is pre-1.0**, a breaking change goes straight to `1.0.0`
-rather than bumping the minor. That is worth knowing before you write `!` — it
-declares the project stable as a side effect.
+**The project is past 1.0**, so a breaking change costs a major version. Write `!`
+or a `BREAKING CHANGE:` footer only when a user-visible contract really changes —
+a renamed Home Assistant topic, a changed record field, a removed setting.
 
 ## Code
 

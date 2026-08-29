@@ -4,6 +4,18 @@ on:
   push:
     branches: [main]
 
+  # Recovery path. A release that failed after its tag was created cannot be
+  # retried by re-running the push workflow: semantic-release sees the tag as the
+  # latest release with nothing newer to release, so it never reaches the publish
+  # phase and GoReleaser is never invoked. This republishes artefacts for a tag
+  # that already exists.
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing tag to build and publish artefacts for, e.g. v1.0.0'
+        required: true
+        type: string
+
 # Do not split this into "tag here, release there".
 #
 # GitHub does not start a workflow from an event created with the run's own
@@ -37,6 +49,8 @@ jobs:
           # The commit analyser reads back to the previous tag. A shallow clone
           # makes it decide from a truncated history, which is wrong quietly.
           fetch-depth: 0
+          # On a dispatch, build the tag as it was, not the current main.
+          ref: ${{ inputs.tag || github.ref }}
 
       - uses: actions/setup-go@v5
         with:
@@ -69,9 +83,19 @@ jobs:
         run: npm ci
 
       - name: release
+        if: github.event_name == 'push'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npx semantic-release
+
+      # The dispatch path skips semantic-release entirely: the version already
+      # exists and must not be recomputed. GoReleaser builds the tag as it stands.
+      - name: republish artefacts for an existing tag
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GORELEASER_CURRENT_TAG: ${{ inputs.tag }}
+        run: goreleaser release --clean
 
       # GoReleaser creates the release as a draft. It becomes visible only here,
       # once the image manifest is confirmed to resolve for both architectures.
@@ -83,9 +107,10 @@ jobs:
       - name: verify the artefacts, then publish the draft
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DISPATCH_TAG: ${{ inputs.tag }}
         run: |
           set -euo pipefail
-          tag="$(git describe --tags --abbrev=0 2>/dev/null || true)"
+          tag="${DISPATCH_TAG:-$(git describe --tags --abbrev=0 2>/dev/null || true)}"
           if [ -z "$tag" ]; then
             echo "no tag exists; nothing was released"
             exit 0
