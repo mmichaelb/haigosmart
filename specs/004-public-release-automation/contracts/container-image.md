@@ -20,7 +20,13 @@ Public: no `docker login` to pull. Architecture is selected by the manifest list
 
 ## Contents
 
-`scratch` plus one binary. No shell, no package manager, no CA bundle, no `/etc/passwd`.
+`scratch`, one binary, and an empty `/data` owned by `65534`. No shell, no package manager, no
+CA bundle, no `/etc/passwd`.
+
+The empty directory is not incidental. `scratch` has no filesystem for a volume to inherit
+ownership from, so without it a volume mounted at `/data` is created root-owned and the server
+— running as `65534` — cannot write the registry. It still serves, warning on every save, which
+is the sort of half-working that takes a while to notice.
 
 The consequence, stated up front rather than discovered: **`docker exec` gives you nothing.**
 There is no shell to run. Diagnosis is the JSON record stream on standard output, which is
@@ -93,9 +99,9 @@ Neither is precious, and it is worth knowing which kind of "not precious" each i
 - **`tls.key`** is a self-signed key the server generates for itself. Losing it means a new
   certificate next start. The lamps do not verify certificates, so they do not notice.
 
-Running with no volume at all works: both files fail to write, the server warns once and
-continues serving. Mounting `/data` is recommended, not required — which is the honest
-framing, since an operator who skips it gets a working server rather than a broken one.
+Running with no volume at all works and writes into the container's own `/data`, so there is
+no warning — the state simply does not outlive the container. Mounting `/data` is recommended,
+not required, and either way the operator gets a working server rather than a broken one.
 
 ## What the image does not do
 

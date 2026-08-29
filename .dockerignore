@@ -1,4 +1,0 @@
-# GoReleaser builds the binary and places it in the build context; nothing else
-# from the repository belongs in the image or its context.
-*
-!haigosmartd

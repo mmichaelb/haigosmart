@@ -223,7 +223,8 @@ binary is one build too many for FR-021.
   continues with a fresh certificate. The lamps do not verify it.
 - **No libc.** All six targets build with `CGO_ENABLED=0`, confirmed by cross-compiling each
   before this plan was written.
-- **Size**: the `linux/amd64` binary with `-s -w` is 7.4 MB, which is the whole image.
+- **Size**: the `linux/amd64` binary with `-s -w` is 7.4 MB, and the finished image is 10.6 MB
+  — the binary plus an empty `/data`.
 
 **Two consequences that must be handled, not discovered:**
 

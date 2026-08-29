@@ -155,17 +155,17 @@ the extracted binary prints the snapshot version. [quickstart.md](quickstart.md)
 **Independent Test**: build locally, run with feature 003's environment variables, get feature
 003's records. [quickstart.md](quickstart.md) scenario 4.
 
-- [X] T035 [P] [US5] Add `.dockerignore` excluding everything but the built binary — GoReleaser supplies it, so the build context needs nothing else
+- [X] T035 [P] [US5] `.dockerignore`: **written, then removed.** GoReleaser stages its own build context in a temporary directory, so a `.dockerignore` at the repository root applies to nothing. A file that looks like it constrains the image but does not is worse than no file
 - [X] T036 [US5] Create `Dockerfile`: `FROM scratch`, one `COPY` of the binary to `/haigosmartd`, `ENTRYPOINT ["/haigosmartd"]`, `USER 65534:65534`, `EXPOSE 1883`, `VOLUME /data`
 - [X] T037 [US5] Bake `ENV HAIGOSMART_HEADLESS=true` and `ENV HAIGOSMART_REGISTRY=/data/registry.json` into the `Dockerfile`. The second is not a convenience: the default path resolves through `os.UserConfigDir`, which fails in `scratch`, and the fallback is a relative path in an unwritable root — the server would warn on every save forever while otherwise working (research.md §5)
 - [X] T038 [US5] Add a `dockers_v2` block to `.goreleaser.yaml` with `images: [ghcr.io/mmichaelb/haigosmart]`, `platforms: [linux/amd64, linux/arm64]`, and tags for the version, major.minor, major, and `latest` (FR-022, FR-023)
 - [X] T039 [US5] Add OCI labels (`org.opencontainers.image.source`, `.licenses`, `.version`) so the image links back to the repository and declares GPL-3.0
 - [X] T040 [US5] In `.github/workflows/release.yml`, add QEMU and Buildx setup plus a GHCR login using the run's own token — no stored registry credential exists, and that is deliberate (FR-009, research.md §8)
 - [X] T062 Add the verify-then-undraft step to `.github/workflows/release.yml`: confirm the image manifest resolves for `linux/amd64` and `linux/arm64` and that the release carries seven assets, then clear the draft flag. **Added during implementation** — T032 sets `draft: true` but no task created the step that acts on it, so FR-026 had a mechanism with nothing driving it
-- [ ] T041 [US5] Verify locally with a Docker daemon running: `goreleaser release --snapshot --clean` builds both architectures; `docker image inspect` reports **one** layer and user `65534`. More than one layer means something beyond the binary got in
-- [ ] T042 [US5] Verify behaviour against feature 003 (FR-024): run the image with `HAIGOSMART_LAMPS` set, confirm JSON records with the same fields, confirm `docker stop` exits 0 within a second rather than waiting out the grace period
-- [ ] T043 [US5] Verify the time zone fix: run with `TZ=Europe/Berlin` and confirm the record timestamps are Berlin local, not UTC. This is the check that fails silently if T029's build tag is ever dropped
-- [ ] T044 [US5] Verify the no-volume case: run without mounting `/data` and confirm the server serves normally with one `saving the registry failed` warning — degraded, not broken, as [contracts/container-image.md](contracts/container-image.md) claims
+- [X] T041 [US5] Verify locally with a Docker daemon running: `goreleaser release --snapshot --clean` builds both architectures; `docker image inspect` reports **two** layers — the binary and an empty `/data` — and user `65534`. A third layer means something else got in
+- [X] T042 [US5] Verify behaviour against feature 003 (FR-024): run the image with `HAIGOSMART_LAMPS` set, confirm JSON records with the same fields, confirm `docker stop` exits 0 within a second rather than waiting out the grace period
+- [X] T043 [US5] Verify the time zone fix: run with `TZ=Europe/Berlin` and confirm the record timestamps are Berlin local, not UTC. This is the check that fails silently if T029's build tag is ever dropped
+- [X] T044 [US5] Verify the no-volume case: run without mounting `/data` and confirm the server serves normally with one `saving the registry failed` warning — degraded, not broken, as [contracts/container-image.md](contracts/container-image.md) claims
 
 **Checkpoint** — **G1**: everything provable without GitHub is proven. Scenarios 1–4 green.
 
@@ -285,23 +285,15 @@ because `-version` is the only new Go behaviour.
 
 ## Status
 
-**62 tasks, 45 complete, 17 open.** Implemented 2026-08-28.
+**62 tasks, 49 complete, 13 open.** Implemented 2026-08-28, images verified 2026-08-29.
 
 ### Done
 
-Phases 1–6 complete, Phase 7 complete except its four verification tasks, Phase 9
-documentation complete. The suite is green, `gofmt` and `go vet` are clean,
+Phases 1–7 and 9 complete. Only publication remains. The suite is green, `gofmt` and `go vet` are clean,
 `goreleaser check` validates, and `go.mod` changed by exactly one line — the module
 path — with `go.sum` untouched.
 
 ### Open, and why
-
-**Docker daemon not running** (T041–T044): the image cannot be built or run here.
-Everything that produces it is written and validated — `Dockerfile`, the
-`dockers_v2` block, `goreleaser check` — but a configuration that validates is not
-an image that runs, and the difference is exactly where this project's last two
-escaped defects lived. These stay open until the image has actually been built and
-run.
 
 **Repository not yet on GitHub** (T012, T045–T054, T060): publication tasks, plus
 `go install` from the proxy, which cannot resolve a repository that does not exist.
@@ -333,6 +325,39 @@ throwaway repository, not assumed. Documented in `CONTRIBUTING.md` and
 `docs/releasing.md`, because writing `!` pre-1.0 declares the project stable as a
 side effect.
 
+**Local installation contradicts semantic-release's own documentation**, which
+recommends `npx` and advises against installing it. Deviated deliberately: the
+release job holds write tokens, and npx leaves the dependency graph unpinned. The
+deviation, its cost, and the exact reversal are recorded in research.md §1.
+
+**Dependabot was written and then removed** (2026-08-29) — Renovate is already
+configured at the account level and onboards repositories itself, so the file
+would have been a second bot raising the same pull requests.
+
+### Three defects the image found, none of which a validating configuration showed
+
+All three passed `goreleaser check`. None survived contact with a real build.
+
+1. **Double-prefixed image tags.** `dockers_v2` joins each entry in `tags` onto
+   each entry in `images`, so full references in `tags` produced
+   `ghcr.io/mmichaelb/haigosmart:ghcr.io/mmichaelb/haigosmart:0-arm64` and the
+   build refused it. Tags must be bare.
+2. **The `COPY` path was wrong.** `dockers_v2` stages each platform's binary under
+   `$TARGETOS/$TARGETARCH/` in the build context, not at its root. Fixed with
+   `ARG TARGETOS` / `ARG TARGETARCH` and a templated `COPY`, which is also what
+   lets one Dockerfile serve both architectures.
+3. **`/data` was not writable.** `scratch` has no filesystem for a volume to
+   inherit ownership from, so a volume mounted at `/data` — named or bind — was
+   created root-owned while the server runs as `65534`. The server still served,
+   warning on every save, losing state across restarts: working badly rather than
+   failing. **The documented `docker run -v haigosmart-data:/data` example did not
+   work as written.** Fixed with a discarded build stage that carries an empty
+   `/data` owned by `65534` into the final image, which takes it to two layers.
+
+The pattern is the one this project keeps producing, and it is why the plan
+refused to unit-test the pipeline: a configuration that validates is not an image
+that runs, and no amount of schema checking would have surfaced any of the three.
+
 ### Verified rather than assumed
 
 - History: 172 files ever added, zero credential, capture, or key hits (T001)
@@ -352,8 +377,20 @@ side effect.
 
 ### Gates
 
-**G1** — scenarios 1–4: **partially passed.** Scenarios 1 and 3 pass; scenario 2's
-binary half passes and its image half is blocked on Docker; scenario 4 is entirely
-blocked on Docker.
+**G1** — scenarios 1–4: **passed 2026-08-29.** Six archives with correct flat
+contents and a working checksum file; both image architectures built; the arm64
+image verified natively — two layers, user `65534`, no shell (`docker exec` fails,
+as designed), `-version` reporting the stamped snapshot version, feature 003's
+records on standard output, `docker stop` returning 0 in 0.1 s, `TZ=Europe/Berlin`
+producing 12:07 where UTC was 10:07, and both the named-volume and no-volume cases
+serving cleanly.
+
+Two caveats on G1, stated rather than glossed: the `linux/amd64` image was **built**
+here but not **run**, because this machine registered no `qemu-x86_64` binfmt
+handler that buildx would advertise — a `scratch` image builds without emulation
+since it has no `RUN` steps, but running one needs it. And Docker Desktop's config
+directory is outside this sandbox, so the build used a relocated `DOCKER_CONFIG`
+and a purpose-made `docker-container` builder. Neither affects CI, where the runner
+is amd64 natively and QEMU is installed by the workflow.
 
 **G2**, **G3**, **G4** — not yet run. All need the repository published.

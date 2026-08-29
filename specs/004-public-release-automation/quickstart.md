@@ -76,8 +76,10 @@ docker image inspect "$IMG" \
 docker history "$IMG"
 ```
 
-**Expect**: one layer, roughly 8 MB, user `65534`. More than one layer means something other
-than the binary got in.
+**Expect**: **two** layers, roughly 10.6 MB, user `65534`. The layers are the binary and an
+empty `/data` owned by `65534` — `scratch` has no filesystem to inherit from, so without that
+directory a mounted volume is created root-owned and the server cannot write it. A third layer
+means something else got in.
 
 ## Scenario 3 — The version decision is correct in both directions (FR-012, FR-014, SC-009)
 

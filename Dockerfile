@@ -9,9 +9,24 @@
 # The cost is real and worth knowing: there is no shell, so `docker exec` gives
 # you nothing. Diagnosis is the JSON record stream on standard output — which is
 # what it was built for. See docs/releasing.md.
+# scratch has no filesystem to inherit from, so a volume mounted at /data is
+# created root-owned and the server — running as 65534 — cannot write it. The
+# registry save then fails on every attempt: not fatal, but a permanent warning
+# and no state across restarts. This stage exists solely to carry an empty /data
+# with the right ownership into the final image, so a named volume works with no
+# host-side setup. Nothing from it survives except that directory.
+FROM busybox:stable AS prep
+RUN mkdir -p /data && chown 65534:65534 /data
+
 FROM scratch
 
-COPY haigosmartd /haigosmartd
+# GoReleaser stages each platform's binary under $TARGETOS/$TARGETARCH in the
+# build context, so one Dockerfile serves every platform. TARGETOS and TARGETARCH
+# are supplied by buildx; they have to be declared to be usable.
+ARG TARGETOS
+ARG TARGETARCH
+COPY ${TARGETOS}/${TARGETARCH}/haigosmartd /haigosmartd
+COPY --from=prep --chown=65534:65534 /data /data
 
 # The registry file and the self-signed TLS key live here. Both are caches: the
 # configured lamp set is authoritative, so losing this volume costs only the

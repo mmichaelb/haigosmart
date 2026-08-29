@@ -133,8 +133,9 @@ and nothing else — every setting in the table below works exactly as it does f
 the binary. Details in [releasing.md](releasing.md); the short version:
 
 - **`/data`** holds the registry and the self-signed TLS key. Both are caches, so
-  running without the volume works — you get one `saving the registry failed`
-  warning and lose only the last-known state across restarts.
+  running without a volume works too — the state simply does not outlive the
+  container. A *bind* mount from the host needs to be writable by uid `65534`
+  (`chown 65534 ./dir`); a named volume needs nothing.
 - **`TZ`** is honoured; without it, records are UTC.
 - **There is no shell in the image.** `docker exec` gives you nothing, by design.
   The records on standard output are the diagnosis.

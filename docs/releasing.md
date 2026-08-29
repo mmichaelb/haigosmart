@@ -93,6 +93,12 @@ replaces the shell: the JSON record stream on standard output. If a problem
 cannot be diagnosed from the records, the fix is a better record, not a bigger
 image.
 
+It is not literally binary-only: the image also carries an empty `/data` owned by
+`65534`. That is not decoration. `scratch` has no filesystem for a volume to
+inherit ownership from, so without it a volume mounted at `/data` is created
+root-owned, the server cannot write the registry, and it warns on every save while
+otherwise appearing to work.
+
 What makes `scratch` possible, in case a future change threatens it:
 
 - The only outbound connection is a plaintext TCP dial to the MQTT broker, so no

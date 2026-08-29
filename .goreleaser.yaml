@@ -75,11 +75,13 @@ dockers_v2:
     platforms:
       - linux/amd64
       - linux/arm64
+    # Bare tags: GoReleaser joins each of these onto every entry in `images`.
+    # A full reference here produces `image:image:tag`.
     tags:
-      - "ghcr.io/mmichaelb/haigosmart:{{ .Version }}"
-      - "ghcr.io/mmichaelb/haigosmart:{{ .Major }}.{{ .Minor }}"
-      - "ghcr.io/mmichaelb/haigosmart:{{ .Major }}"
-      - "ghcr.io/mmichaelb/haigosmart:latest"
+      - "{{ .Version }}"
+      - "{{ .Major }}.{{ .Minor }}"
+      - "{{ .Major }}"
+      - "latest"
     labels:
       org.opencontainers.image.title: haigosmart
       org.opencontainers.image.description: A local replacement for the Aigo bulb cloud

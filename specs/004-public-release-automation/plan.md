@@ -164,9 +164,9 @@ specs/004-public-release-automation/
 
 .goreleaser.yaml               # new: builds, archives, checksums, image, release
 .releaserc.json                # new: semantic-release plugins and branch
-Dockerfile                     # new: FROM scratch, one COPY
+Dockerfile                     # new: scratch, plus a stage that carries an owned /data
 LICENSE                        # new: GPL-3.0 full text
-.dockerignore                  # new
+package.json / package-lock.json  # new: pins the release tooling
 
 cmd/haigosmartd/
 ├── main.go                    # changed: version variable, -version flag, import paths
@@ -201,7 +201,7 @@ Each is argued in [research.md](research.md); this is the index.
 | 2 | One workflow, one job | A tag pushed by the run's own token does not trigger another workflow — the two-workflow design fails silently |
 | 3 | `dockers_v2` rather than `dockers` + `docker_manifests` | One block instead of three; confirmed present and accepted in GoReleaser OSS 2.18 |
 | 4 | Draft the release, publish it only after the image manifest verifies | This is how FR-026 is met: a partial failure leaves a draft nobody sees, not a release missing half its assets |
-| 5 | `scratch`, not `distroless` or `alpine` | The server dials the broker in plaintext and generates its own TLS key, so no CA bundle, no shell, no libc is reachable from any code path |
+| 5 | `scratch`, not `distroless` or `alpine` | The server dials the broker in plaintext and generates its own TLS key, so no CA bundle, no shell, no libc is reachable from any code path. One consequence found on hardware: `scratch` has no filesystem for a volume to inherit ownership from, so the image carries an empty `/data` owned by `65534` |
 | 6 | `-tags timetzdata` on release builds | `scratch` has no zone database; without this an operator setting `TZ` silently gets UTC timestamps, which is a wrong answer rather than a missing one |
 | 7 | `HAIGOSMART_REGISTRY=/data/registry.json` baked into the image | The default path resolves through the user config directory, which does not exist in `scratch`; the fallback is a relative path in an unwritable root |
 | 8 | Release-please rejected | Its release step is a pull request a human merges, which is precisely the manual action FR-011 removes |

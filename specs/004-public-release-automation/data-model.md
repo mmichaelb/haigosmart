@@ -84,7 +84,7 @@ The unattended server, packaged.
 |---|---|
 | Repository | `ghcr.io/mmichaelb/haigosmart` |
 | Base | `scratch` |
-| Contents | The `linux` binary for the image's architecture. Nothing else |
+| Contents | The `linux` binary for the image's architecture, plus an empty `/data` owned by `65534`. Nothing else |
 | Architectures | `linux/amd64`, `linux/arm64`, under one manifest list |
 | Tags | `<version>`, `<major>.<minor>`, `<major>`, `latest` |
 | Entrypoint | `/haigosmartd` |
