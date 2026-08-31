@@ -7,6 +7,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -197,6 +198,11 @@ type peekedConn struct {
 
 func (p *peekedConn) Read(b []byte) (int, error) { return p.reader.Read(b) }
 
+// errNothingSent marks a connection that closed before a single byte arrived.
+// Nothing was said, so nothing can be malformed: it is a health probe, a port
+// scan, or a load balancer, not a protocol violation. Callers report it quietly.
+var errNothingSent = errors.New("connection closed before sending anything")
+
 // sniff looks at the first byte of a connection and, if it is the start of a
 // TLS handshake, wraps the connection in a TLS server. A cleartext connection
 // is returned untouched.
@@ -207,7 +213,12 @@ func (s *Server) sniff(conn net.Conn) (net.Conn, *bufio.Reader, error) {
 	br := bufio.NewReader(conn)
 	first, err := br.Peek(1)
 	if err != nil {
-		return nil, nil, fmt.Errorf("reading the first byte from %s: %w", conn.RemoteAddr(), err)
+		// Not a byte arrived, so nothing was said and nothing can be malformed.
+		// This is what a Kubernetes tcpSocket probe looks like — connect, close,
+		// repeat every few seconds — and equally what a port scanner or a load
+		// balancer check looks like. Reporting it as a protocol error fills an
+		// idle server's records with the health check that is proving it healthy.
+		return nil, nil, fmt.Errorf("%w from %s: %w", errNothingSent, conn.RemoteAddr(), err)
 	}
 	if first[0] != tlsRecordHandshake {
 		return conn, br, nil

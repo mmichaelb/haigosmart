@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net"
@@ -89,6 +90,14 @@ func (s *Server) Serve(ctx context.Context, ln net.Listener) error {
 			ready, reader, err := s.sniff(conn)
 			if err != nil {
 				conn.Close()
+				// A peer that connected and said nothing is not an event. It is
+				// a probe, a scan, or a balancer, and on an exposed port those
+				// arrive forever. Kept at debug so `-v` still shows them.
+				if errors.Is(err, errNothingSent) {
+					slog.Default().Debug("connection closed before sending anything",
+						"remote", conn.RemoteAddr().String(), "reason", err)
+					return
+				}
 				s.publish(events.Event{
 					At: s.now(), Kind: events.ProtocolError,
 					Detail: err.Error(),

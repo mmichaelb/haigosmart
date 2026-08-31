@@ -258,6 +258,34 @@ haigosmart: cannot write the record stream: write /dev/stdout: broken pipe
 An unattended server nobody can hear is not running, and restarting it is the
 supervisor's decision.
 
+## Health checks
+
+There is no HTTP endpoint. The server speaks one protocol on one port, so a TCP
+check on the listener is the whole of what can be known from outside:
+
+```yaml
+readinessProbe:
+  tcpSocket: { port: 1883 }
+livenessProbe:
+  tcpSocket: { port: 1883 }
+  initialDelaySeconds: 10
+```
+
+A connection that opens and closes without sending anything — which is exactly what
+that probe does — is **not** recorded as a protocol error. Port scanners and load
+balancer checks look identical and are equally silent. Run with `-v` to see them.
+
+What a TCP probe does *not* tell you: whether any lamp is connected, or whether the
+Home Assistant bridge has reached the broker. A healthy socket with every lamp
+unplugged looks the same as one with all of them online — which is correct, since a
+server whose lamps are switched off at the wall is working perfectly and should not
+be restarted for it. Lamp state belongs in the records, not in a probe.
+
+Liveness matters less here than it usually does: the server exits 1 on any startup
+failure and on a dead record stream, and exits 0 on `SIGTERM` within milliseconds. A
+restart policy plus the exit status covers most of it. The probe adds one thing —
+catching a process that is alive but wedged.
+
 ## Exit codes
 
 | Code | Meaning |
