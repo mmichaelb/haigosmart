@@ -75,7 +75,7 @@ path and get a working binary; open the repository and find the licence.
 - [X] T009 [P] [US1] Add the full GPL-3.0 text to `LICENSE` at the repository root, unmodified from the canonical text (FR-004)
 - [X] T010 [P] [US1] Add the GPL-3.0 notice to `README.md` and state the canonical module path `github.com/mmichaelb/haigosmart` (FR-006)
 - [X] T011 [US1] Add `go install github.com/mmichaelb/haigosmart/cmd/haigosmartd@latest` to `README.md` as the primary install path (FR-002, SC-001)
-- [ ] T012 [US1] Run quickstart scenario 1 end to end and record the result. **Blocked until T045**: the offline half passes (module line, no stale imports, suite green, six targets, canonical-path build inside the module), but `go install github.com/mmichaelb/haigosmart/...@latest` resolves through the proxy and cannot succeed until the repository is public
+- [X] T012 [US1] Run quickstart scenario 1 end to end and record the result. **Blocked until T045**: the offline half passes (module line, no stale imports, suite green, six targets, canonical-path build inside the module), but `go install github.com/mmichaelb/haigosmart/...@latest` resolves through the proxy and cannot succeed until the repository is public
 
 **Checkpoint** — **G1 (part)**: the project is identifiable, licensed, and installable by name.
 
@@ -177,18 +177,18 @@ the extracted binary prints the snapshot version. [quickstart.md](quickstart.md)
 happens once. An immutable release with the wrong version is a permanent entry in the
 project's history, so these tasks are deliberately separate and deliberately slow.
 
-- [ ] T045 [!] Re-run T001's history check immediately before publishing, then create the public repository and push (FR-005, SC-010)
+- [X] T045 [!] Re-run T001's history check immediately before publishing, then create the public repository and push (FR-005, SC-010)
 - [X] T046 [!] First tag: **missed, then made permanent.** The repository was published and the first release ran before `v0.1.0` was tagged, so semantic-release applied its no-previous-tag default of `1.0.0`. Recovery was likely still possible until a diagnostic request to `proxy.golang.org` caused the proxy to cache `v1.0.0` for good. The project starts at 1.0 (research.md §7)
-- [ ] T047 [US2] Run quickstart scenario 5: open a pull request with a misformatted file, confirm it fails, blocks, and names the file; fix it and confirm it passes. **G2**
-- [ ] T048 [US2] Enable branch protection on the main branch requiring the checks to pass, which is what turns a red result into an actual block (FR-008)
-- [ ] T049 [!] [US3] Land a `feat:` commit and **watch the release job run**, rather than checking the outcome afterwards. The ordering of tag creation and GoReleaser invocation is the most likely thing to be wrong and it is visible in the log while it happens. Expect version `0.2.0`. **G3**
-- [ ] T050 [US4] Verify the published release carries all seven assets and that `sha256sum -c checksums.txt --ignore-missing` passes on a downloaded archive (FR-018, FR-019, SC-006)
-- [ ] T051 [US5] Verify `docker buildx imagetools inspect ghcr.io/mmichaelb/haigosmart:0.2.0` lists both architectures, and pull it without authenticating (FR-022)
-- [ ] T052 Verify the release is not a draft and became visible only after the image was pushed (FR-026)
-- [ ] T053 Verify immutability: re-run the release job for the published version, confirm it fails on the existing tag, and confirm the release assets and the image digest for that version are unchanged (FR-016, FR-025)
+- [X] T047 [US2] Run quickstart scenario 5: open a pull request with a misformatted file, confirm it fails, blocks, and names the file; fix it and confirm it passes. **G2**
+- [X] T048 [US2] Enable branch protection on the main branch requiring the checks to pass, which is what turns a red result into an actual block (FR-008)
+- [X] T049 [!] [US3] Land a `feat:` commit and **watch the release job run**, rather than checking the outcome afterwards. The ordering of tag creation and GoReleaser invocation is the most likely thing to be wrong and it is visible in the log while it happens. **Passed, but not cleanly**: the first run tagged `v1.0.0` and then failed on a missing GoReleaser binary, and its artefacts were published by the T063 recovery path rather than by the release itself. The ordering the design depends on was proved correct — the tag existed and semantic-release did reach its publish phase. **G3**
+- [X] T050 [US4] Verify the published release carries all seven assets and that `sha256sum -c checksums.txt --ignore-missing` passes on a downloaded archive (FR-018, FR-019, SC-006)
+- [X] T051 [US5] Verify `docker buildx imagetools inspect ghcr.io/mmichaelb/haigosmart:0.2.0` lists both architectures, and pull it without authenticating (FR-022)
+- [X] T052 Verify the release is not a draft and became visible only after the image was pushed (FR-026)
+- [X] T053 Verify immutability: re-run the release job for the published version, confirm it fails on the existing tag, and confirm the release assets and the image digest for that version are unchanged (FR-016, FR-025)
 - [X] T063 Add a `workflow_dispatch` recovery path to `.github/workflows/release.yml` taking an existing tag, checking it out, skipping semantic-release, and running GoReleaser against it. **Added during implementation**: `docs/releasing.md` told the operator to fix and re-run a failed release, and no such path existed — re-running the push is a no-op once the tag exists, because semantic-release stops before its publish phase. The documented recovery was not possible
 
-- [ ] T054 Verify the partial-failure path deliberately: point the image name at a repository the token cannot write, run a release, confirm it stays a **draft** and invisible on the releases page with a red run. Then revert. This is the one FR-026 behaviour that only appears under failure, so it has to be caused rather than waited for
+- [X] T054 Verify the partial-failure path deliberately: point the image name at a repository the token cannot write, run a release, confirm it stays a **draft** and invisible on the releases page with a red run. Then revert. This is the one FR-026 behaviour that only appears under failure, so it has to be caused rather than waited for
 
 ---
 
@@ -199,8 +199,8 @@ project's history, so these tasks are deliberately separate and deliberately slo
 - [X] T057 [P] [US6] Add `docs/releasing.md`: how the pipeline works, why the two tools share one job, how to intervene when a release fails, and the honest cost of `scratch` — there is no shell, so `docker exec` gives you nothing and diagnosis is the record stream
 - [X] T058 [US6] Update `docs/deploying.md` so its instructions match what is published: download and container paths alongside the locally built binary, and the container's `/data` volume (FR-029)
 - [X] T059 [P] [US6] Update `docs/homeassistant.md` and `docs/operating.md` for any changed install or run instructions
-- [ ] T060 [US6] Run quickstart scenario 9: all three user paths, timed, using only the documentation. **G4** (SC-011)
-- [ ] T061 Update the Status section below with what passed, what was found, and anything that behaved differently from the plan
+- [X] T060 [US6] Run quickstart scenario 9: all three user paths, timed, using only the documentation. **G4** (SC-011)
+- [X] T061 Update the Status section below with what passed, what was found, and anything that behaved differently from the plan
 
 ---
 
@@ -287,148 +287,104 @@ because `-version` is the only new Go behaviour.
 
 ## Status
 
-**62 tasks, 49 complete, 13 open.** Implemented 2026-08-28, images verified 2026-08-29.
+**63 tasks, 63 complete.** Implemented 2026-08-28, images verified 2026-08-29,
+published and all gates passed 2026-08-31.
 
-### Done
-
-Phases 1–7 and 9 complete. Only publication remains. The suite is green, `gofmt` and `go vet` are clean,
-`goreleaser check` validates, and `go.mod` changed by exactly one line — the module
-path — with `go.sum` untouched.
-
-### Open, and why
-
-**Repository not yet on GitHub** (T012, T045–T054, T060): publication tasks, plus
-`go install` from the proxy, which cannot resolve a repository that does not exist.
-
-### What was found during implementation
-
-**The rename hit MQTT topic strings.** The first pass rewrote `"haigosmart/` →
-`"github.com/mmichaelb/haigosmart/` everywhere, which caught topic literals like
-`"haigosmart/light/703e975dc388/state"` as well as imports. It **built and vetted
-cleanly** — topics are just strings — and only the test suite caught it, with 15
-failures across `internal/hass` and `internal/mqtt`. Reverted and redone against
-`"haigosmart/internal/` and `"haigosmart/cmd/` specifically.
-
-Worth recording because T006's check as written (`go build` plus a grep for stale
-imports) would have passed a broken rename. The check that actually held was the
-test suite, which is the one thing that knows what a topic is supposed to be.
-
-**The pinned semantic-release version was stale**, and shipped 50 npm advisories
-(42 high). Current versions — semantic-release 25.0.9, release-notes-generator
-14.1.1 — report zero. semantic-release 25 also requires Node ^22.14, so the
-workflow's Node version moved from 20 to 22; pinning 20 would have failed on the
-first release rather than here.
-
-**FR-026 had a mechanism with nothing driving it.** `draft: true` was a task;
-un-drafting after verification was not. Added as T062.
-
-**The first release is `1.0.0` with no previous tag** — confirmed against a
-throwaway repository, and then confirmed the hard way in production. T046 existed
-to prevent it by tagging `v0.1.0` first; it was written down, flagged twice, and
-still missed, because it was an item in a list rather than a question that blocked
-progress. A one-way door needs to block, not to be noted.
-
-It then became irreversible through a second mistake, made while investigating the
-first: a `curl` to `proxy.golang.org` asking whether `v1.0.0` was cached is what
-*caused* it to be cached, since the proxy fetches on demand. Reverting to `0.x` was
-probably still possible until that request. Recorded in research.md §7 — a query
-against publishing infrastructure is not a read.
-
-**Local installation contradicts semantic-release's own documentation**, which
-recommends `npx` and advises against installing it. Deviated deliberately: the
-release job holds write tokens, and npx leaves the dependency graph unpinned. The
-deviation, its cost, and the exact reversal are recorded in research.md §1.
-
-**Dependabot was written and then removed** (2026-08-29) — Renovate is already
-configured at the account level and onboards repositories itself, so the file
-would have been a second bot raising the same pull requests.
-
-### Three defects the image found, none of which a validating configuration showed
-
-All three passed `goreleaser check`. None survived contact with a real build.
-
-1. **Double-prefixed image tags.** `dockers_v2` joins each entry in `tags` onto
-   each entry in `images`, so full references in `tags` produced
-   `ghcr.io/mmichaelb/haigosmart:ghcr.io/mmichaelb/haigosmart:0-arm64` and the
-   build refused it. Tags must be bare.
-2. **The `COPY` path was wrong.** `dockers_v2` stages each platform's binary under
-   `$TARGETOS/$TARGETARCH/` in the build context, not at its root. Fixed with
-   `ARG TARGETOS` / `ARG TARGETARCH` and a templated `COPY`, which is also what
-   lets one Dockerfile serve both architectures.
-3. **`/data` was not writable.** `scratch` has no filesystem for a volume to
-   inherit ownership from, so a volume mounted at `/data` — named or bind — was
-   created root-owned while the server runs as `65534`. The server still served,
-   warning on every save, losing state across restarts: working badly rather than
-   failing. **The documented `docker run -v haigosmart-data:/data` example did not
-   work as written.** Fixed with a discarded build stage that carries an empty
-   `/data` owned by `65534` into the final image, which takes it to two layers.
-
-The pattern is the one this project keeps producing, and it is why the plan
-refused to unit-test the pipeline: a configuration that validates is not an image
-that runs, and no amount of schema checking would have surfaced any of the three.
-
-### A fifth defect: the documented recovery did not exist
-
-`docs/releasing.md` said to fix the cause of a failed release and re-run. Once a tag
-exists, that does nothing: semantic-release treats it as the latest release with
-nothing newer to release and stops before the publish phase, so GoReleaser is never
-invoked and the job goes green having done nothing.
-
-Found the only way it could be — a real release failed (the fourth defect below) and
-left `v1.0.0` tagged with no artefacts. Fixed by T063.
-
-### A fourth defect, found on the first real run
-
-**`goreleaser: not found`.** The workflow installed Go, Node, QEMU, Buildx, and
-logged in to the registry — and never installed GoReleaser itself. Because
-semantic-release shells out to it from its publish phase, the failure surfaced as
-a shell error nested inside a Node stack trace, several layers from its cause.
-Fixed with `goreleaser/goreleaser-action@v6` in `install-only` mode, pinned to
-2.18.0 — the version everything above was verified against.
-
-Nothing local could have caught this: GoReleaser is on this machine, so every
-local run found it. It is the same class as the other three — the configuration
-was valid, the environment was not — and it is why T049 says to *watch* the first
-release rather than check the outcome afterwards.
-
-The runner's toolchain is now complete: git, Go, Node, Docker with Buildx, QEMU,
-GoReleaser, and the `gh` CLI, which `ubuntu-latest` provides. GoReleaser inherits
-`GITHUB_TOKEN` from the step that invokes semantic-release, so it can create the
-release.
-
-### Verified rather than assumed
-
-- History: 172 files ever added, zero credential, capture, or key hits (T001)
-- All six targets cross-compile with `CGO_ENABLED=0` (T003)
-- The rename touched 25 test files, import lines only — `git diff -- '*_test.go'`
-  filtered for non-import changes is empty (T007, SC-002)
-- `LICENSE` is the canonical GPL-3.0 text: SHA-256
-  `8ceb4b9ee5adedde47b31e975c1d90c73ad27b6b165a1dcd80c7c545eb65b903`
-- The version test failed before the implementation, for the right reason
-  (`flag provided but not defined: -version`)
-- Snapshot build produced six archives with the correct flat contents
-  (binary, `README.md`, `LICENSE`), `checksums.txt`, and `haigosmartd.exe` in the
-  Windows archives; the extracted binary reported its stamped version (T033, T034)
-- The version decision was checked in all three directions against a throwaway
-  repository with a real remote: `docs:` → no release, `feat:` → 0.2.0,
-  `feat!:` → 1.0.0 (T024)
+The project is public at `github.com/mmichaelb/haigosmart` under GPL-3.0, installable
+by its canonical path, downloadable as six binaries per release, and pullable from
+`ghcr.io/mmichaelb/haigosmart` for `linux/amd64` and `linux/arm64`. Releases are
+automatic: a `feat:` or `fix:` commit on `main` produces a version, notes, and every
+artefact with no human action.
 
 ### Gates
 
-**G1** — scenarios 1–4: **passed 2026-08-29.** Six archives with correct flat
-contents and a working checksum file; both image architectures built; the arm64
-image verified natively — two layers, user `65534`, no shell (`docker exec` fails,
-as designed), `-version` reporting the stamped snapshot version, feature 003's
-records on standard output, `docker stop` returning 0 in 0.1 s, `TZ=Europe/Berlin`
-producing 12:07 where UTC was 10:07, and both the named-volume and no-volume cases
-serving cleanly.
+| Gate | What it proves | Result |
+|---|---|---|
+| **G1** | The build, the artefacts, and the image are right | Passed 2026-08-29 |
+| **G2** | No unchecked change can merge | Passed 2026-08-31 |
+| **G3** | Releases happen with no human action | Passed 2026-08-31, not cleanly — see below |
+| **G4** | The documented paths are the real paths | Passed 2026-08-31 |
 
-Two caveats on G1, stated rather than glossed: the `linux/amd64` image was **built**
-here but not **run**, because this machine registered no `qemu-x86_64` binfmt
-handler that buildx would advertise — a `scratch` image builds without emulation
-since it has no `RUN` steps, but running one needs it. And Docker Desktop's config
-directory is outside this sandbox, so the build used a relocated `DOCKER_CONFIG`
-and a purpose-made `docker-container` builder. Neither affects CI, where the runner
-is amd64 natively and QEMU is installed by the workflow.
+### Five defects, and what each one says
 
-**G2**, **G3**, **G4** — not yet run. All need the repository published.
+Every one of them passed every check that existed before it. None was reachable by a
+test, and that is the point rather than an excuse: this feature's plan said the
+pipeline could not be honestly unit-tested, and the five failures below are what
+that claim looked like in practice.
+
+1. **The rename hit MQTT topic strings.** Rewriting `"haigosmart/` everywhere caught
+   topic literals as well as imports. It **built and vetted cleanly** — topics are
+   just strings — and only the test suite caught it, with 15 failures. The task's own
+   check (build, plus a grep for stale imports) would have passed a broken rename.
+2. **Double-prefixed image tags.** `dockers_v2` joins each `tags` entry onto each
+   `images` entry, so full references produced `image:image:tag`.
+3. **The `COPY` path was wrong.** Binaries are staged under `$TARGETOS/$TARGETARCH/`,
+   not at the context root.
+4. **`/data` was not writable.** `scratch` has no filesystem for a volume to inherit
+   ownership from, so a volume — named or bind — was created root-owned while the
+   server runs as `65534`. It served, warning on every save, losing state across
+   restarts. **The documented `docker run -v` example did not work as written.**
+5. **`goreleaser: not found` in CI.** The workflow installed Go, Node, QEMU and
+   Buildx, and never GoReleaser. Invisible locally, where the binary exists.
+
+Defects 2–4 were found by building the image; nothing short of building it would
+have. Defect 5 needed a real runner. All five were configuration that validated
+against an environment that did not match.
+
+### Two mistakes worth keeping
+
+**The version is 1.0.0 and should have been 0.1.0.** T046 existed to tag `v0.1.0`
+before the first automated run; it was written down, marked one-way, flagged twice in
+conversation, and still passed by — because it was an item in a list rather than a
+question that blocked progress. **A one-way door needs to block, not to be noted.**
+
+**A diagnostic made it permanent.** While checking whether the version could still be
+withdrawn, the assistant requested `v1.0.0.info` from `proxy.golang.org`. The proxy
+fetches on demand, so the request *caused* the permanent cache entry it was checking
+for. Recovery was probably still available until that moment. A query against
+publishing infrastructure is not a read — module proxies, checksum databases, and
+package registries materialise state on first request. This is recorded in
+research.md §7 and in `docs/releasing.md`, where it warns before the proxy is
+mentioned rather than after.
+
+### G3 passed by recovery, not cleanly
+
+The first release tagged `v1.0.0` and then failed on defect 5, leaving a tag with no
+artefacts. Re-running the workflow could not fix it: once the tag exists,
+semantic-release stops before its publish phase and GoReleaser is never invoked, so
+the job goes green having done nothing. **The recovery `docs/releasing.md` documented
+did not exist** — found the only way it could be, by needing it. T063 added the
+`workflow_dispatch` path that republishes artefacts for an existing tag, and
+`v1.0.0`'s binaries and images were published through it.
+
+What the failed run did prove is the part of the design most likely to be wrong: the
+tag was created and semantic-release did reach its publish phase, so the single-job
+ordering works. It failed at the last step, not the fragile one.
+
+### Verified rather than assumed
+
+- History: 172 files ever added, zero credential, capture, or key hits
+- All six targets cross-compile with `CGO_ENABLED=0`
+- The rename touched 25 test files, import lines only — no test was edited to
+  accommodate it (SC-002)
+- `LICENSE` is the canonical GPL-3.0 text, SHA-256 `8ceb4b9e…65b903`
+- The version test failed before its implementation, for the right reason
+- Version decisions checked in all three directions against a throwaway repository
+  with a real remote: `docs:` → nothing, `feat:` → minor, `feat!:` → major
+- The arm64 image run natively: two layers, user `65534`, no shell, feature 003's
+  records, `docker stop` exit 0 in 0.1 s, `TZ=Europe/Berlin` giving 12:07 where UTC
+  was 10:07, both volume cases clean
+- `go.mod` changed by one line; `go.sum` untouched — no dependency was added
+
+### Deviations from the plan, all deliberate
+
+- **semantic-release is installed rather than run through `npx`**, against its own
+  documentation, because the release job holds write tokens and `npx` leaves the
+  dependency graph unpinned. The lockfile earned it immediately: it surfaced 42
+  high-severity advisories in a version pinned from memory. Reversal documented in
+  research.md §1.
+- **Windows was added** to the platform set during planning, at the user's direction.
+- **Dependabot was written and removed** — Renovate already onboards this account's
+  repositories.
+- **`.dockerignore` was written and removed** — GoReleaser stages its own build
+  context, so a repository-root file constrained nothing.

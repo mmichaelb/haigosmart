@@ -127,8 +127,16 @@ docker run --rm -e HAIGOSMART_LAMPS="a1=x" "$IMG"
 broken — the contract in [contracts/container-image.md](contracts/container-image.md) says a
 volume is recommended rather than required, and this is where that claim is tested.
 
-**G1** — scenarios 1–4 green on this machine. Everything provable without GitHub is proven
-here; what remains genuinely needs a published repository.
+**G1** — scenarios 1–4 green on this machine. **Passed 2026-08-29**: six archives with the
+correct flat contents, a working checksum file, both image architectures built, and the arm64
+image verified natively — two layers, user `65534`, no shell, the stamped version, feature
+003's records, `docker stop` exiting 0 in 0.1 s, `TZ=Europe/Berlin` giving 12:07 where UTC was
+10:07, and both the named-volume and no-volume cases serving cleanly.
+
+Three defects were found here and nowhere else, all of which had passed `goreleaser check`:
+double-prefixed image tags, a `COPY` that ignored the `$TARGETOS/$TARGETARCH/` staging layout,
+and a `/data` that no mounted volume could write. Everything provable without GitHub was proven
+here; what remained genuinely needed a published repository.
 
 ---
 
@@ -143,7 +151,9 @@ and the same pull request goes green.
 Then open one from a fork and confirm the checks still run, with no secret available to it
 and no release job triggered.
 
-**G2** — checks are enforced.
+**G2** — checks are enforced. **Passed 2026-08-31**: a misformatted pull request failed and
+was blocked, the log named the file, and the corrected commit went green. Branch protection
+requires the checks, so a red result is a real block rather than a visible warning.
 
 ## Scenario 6 — The first release (FR-017, research §7)
 
@@ -160,6 +170,13 @@ and the image manifest resolves for both architectures.
 **G3** — the first automated release. Watch it end to end rather than checking the outcome
 afterwards: the ordering of tag creation and GoReleaser invocation is the single most likely
 thing to be wrong, and it is visible in the job log while it is happening.
+
+**Passed 2026-08-31, by recovery rather than cleanly.** The first run tagged `v1.0.0` and then
+failed on a missing GoReleaser binary in the runner. Re-running could not fix it — once the tag
+exists, semantic-release stops before its publish phase — so the artefacts were published
+through the `workflow_dispatch` path added as T063. The ordering this design depends on was
+proved correct: the tag existed and the publish phase was reached. It failed at the last step,
+not the fragile one.
 
 ## Scenario 7 — A published release is complete, and a broken one is invisible (FR-026)
 
@@ -210,6 +227,7 @@ docker run --rm -e HAIGOSMART_LAMPS="…" ghcr.io/mmichaelb/haigosmart:latest
 
 **G4** — the documentation gate: someone who has not seen this project reaches a running
 instance by whichever of the three paths they prefer, without asking a question (SC-011).
+**Passed 2026-08-31.**
 
 ---
 
