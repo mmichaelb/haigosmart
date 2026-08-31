@@ -65,7 +65,7 @@ jobs:
 
       # No stored registry credential exists: this is the run's own token, and
       # it is why a fork's pull request has nothing to reach.
-      - uses: docker/login-action@v3
+      - uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
