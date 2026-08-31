@@ -168,9 +168,20 @@ func TestDebouncedSavesCoalesce(t *testing.T) {
 	for i := 1; i <= 50; i++ {
 		reg.SetState(b.DeviceID, bulb.LightState{Power: true, Brightness: uint8(i)}, now)
 	}
-	time.Sleep(80 * time.Millisecond)
-	if _, err := os.Stat(path); err != nil {
-		t.Fatalf("debounced save never landed: %v", err)
+	// Wait for the file rather than sleeping a fixed span. The debounce is 20ms,
+	// but the save that follows it has to be scheduled and then fsync'd, and a
+	// loaded CI runner under -race can miss any deadline picked in advance.
+	// Polling is slow only when the save genuinely never lands.
+	deadline := time.Now().Add(2 * time.Second)
+	for {
+		_, err := os.Stat(path)
+		if err == nil {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("debounced save never landed: %v", err)
+		}
+		time.Sleep(time.Millisecond)
 	}
 	if err := s.Close(); err != nil {
 		t.Fatal(err)
