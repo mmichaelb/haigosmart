@@ -74,7 +74,7 @@ jobs:
       # semantic-release shells out to `goreleaser` from its publish phase, so the
       # binary has to be on PATH before that runs. install-only: it is invoked by
       # semantic-release, not by this action.
-      - uses: goreleaser/goreleaser-action@v6
+      - uses: goreleaser/goreleaser-action@v7
         with:
           install-only: true
           version: '2.18.0'
