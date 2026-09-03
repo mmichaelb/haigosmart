@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
+
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/mmichaelb/haigosmart/internal/bulb"
 )
@@ -15,7 +17,13 @@ var (
 )
 
 // View implements tea.Model.
-func (m *Model) View() string {
+func (m *Model) View() tea.View {
+	view := tea.NewView(m.render())
+	view.AltScreen = true
+	return view
+}
+
+func (m *Model) render() string {
 	if m.quitting {
 		return "saved. bye\n"
 	}

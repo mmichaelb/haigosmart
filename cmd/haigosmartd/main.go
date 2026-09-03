@@ -14,7 +14,7 @@ import (
 	"syscall"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/mmichaelb/haigosmart/internal/config"
 	"github.com/mmichaelb/haigosmart/internal/control"
@@ -190,7 +190,7 @@ func run() error {
 	sub := bus.Subscribe(1024)
 	defer sub.Close()
 	model := tui.New(ctrl, reg, sub, cancel)
-	program := tea.NewProgram(model, tea.WithAltScreen())
+	program := tea.NewProgram(model)
 
 	if _, err := program.Run(); err != nil {
 		cancel()

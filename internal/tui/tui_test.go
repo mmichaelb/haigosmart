@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 
 	"github.com/mmichaelb/haigosmart/internal/bulb"
 	"github.com/mmichaelb/haigosmart/internal/control"
@@ -34,9 +34,9 @@ func newModel(t *testing.T) (*Model, *registry.Registry, *events.Bus) {
 // that only pressed Enter would never see the result.
 func typeLine(m *Model, line string) *Model {
 	for _, r := range line {
-		m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
+		m.Update(tea.KeyPressMsg{Code: r, Text: string(r)})
 	}
-	next, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	next, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	m = next.(*Model)
 	if cmd == nil {
 		return m
@@ -52,7 +52,7 @@ func typeLine(m *Model, line string) *Model {
 func TestSubmitEchoesAndAnswers(t *testing.T) {
 	m, _, _ := newModel(t)
 	m = typeLine(m, "list")
-	view := m.View()
+	view := m.View().Content
 	if !strings.Contains(view, "> list") {
 		t.Error("the submitted command should be echoed in the feed")
 	}
@@ -67,8 +67,8 @@ func TestSubmitEchoesAndAnswers(t *testing.T) {
 func TestUnknownCommandShowsGuidance(t *testing.T) {
 	m, _, _ := newModel(t)
 	m = typeLine(m, "dim kitchen")
-	if !strings.Contains(m.View(), "unknown command") {
-		t.Errorf("view:\n%s", m.View())
+	if !strings.Contains(m.View().Content, "unknown command") {
+		t.Errorf("view:\n%s", m.View().Content)
 	}
 }
 
@@ -77,17 +77,17 @@ func TestHistoryNavigation(t *testing.T) {
 	m = typeLine(m, "list")
 	m = typeLine(m, "help")
 
-	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyUp})
+	next, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyUp})
 	m = next.(*Model)
 	if m.input.Value() != "help" {
 		t.Errorf("first up = %q, want help", m.input.Value())
 	}
-	next, _ = m.Update(tea.KeyMsg{Type: tea.KeyUp})
+	next, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyUp})
 	m = next.(*Model)
 	if m.input.Value() != "list" {
 		t.Errorf("second up = %q, want list", m.input.Value())
 	}
-	next, _ = m.Update(tea.KeyMsg{Type: tea.KeyDown})
+	next, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyDown})
 	m = next.(*Model)
 	if m.input.Value() != "help" {
 		t.Errorf("down = %q, want help", m.input.Value())
@@ -96,7 +96,7 @@ func TestHistoryNavigation(t *testing.T) {
 
 func TestHistoryOnEmptyHistoryIsHarmless(t *testing.T) {
 	m, _, _ := newModel(t)
-	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyUp})
+	next, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyUp})
 	if got := next.(*Model).input.Value(); got != "" {
 		t.Errorf("input = %q, want empty", got)
 	}
@@ -110,7 +110,7 @@ func TestEventsAppearInTheFeed(t *testing.T) {
 	}
 	next, _ := m.Update(eventMsg(e))
 	m = next.(*Model)
-	view := m.View()
+	view := m.View().Content
 	if !strings.Contains(view, "kitchen") || !strings.Contains(view, "power off→on") {
 		t.Errorf("view:\n%s", view)
 	}
@@ -125,7 +125,7 @@ func TestResizeKeepsViewCoherent(t *testing.T) {
 		next, _ := m.Update(size)
 		m = next.(*Model)
 		m.Update(eventMsg(events.Event{At: time.Now(), Kind: events.Connected, Name: "a-very-long-bulb-name-here"}))
-		view := m.View()
+		view := m.View().Content
 		for _, line := range strings.Split(view, "\n") {
 			// Display cells, not bytes: a box-drawing character is three bytes
 			// wide and one cell wide, and it is cells that corrupt a display.
@@ -245,7 +245,7 @@ func TestCtrlCQuits(t *testing.T) {
 	sub := bus.Subscribe(8)
 	defer sub.Close()
 	m := New(control.New(lights.New(reg, bus), reg), reg, sub, cancel)
-	m.Update(tea.KeyMsg{Type: tea.KeyCtrlC})
+	m.Update(tea.KeyPressMsg{Code: 'c', Mod: tea.ModCtrl})
 	select {
 	case <-ctx.Done():
 	default:
@@ -280,9 +280,9 @@ func TestSlowCommandDoesNotBlockTheInterface(t *testing.T) {
 
 	// Submit without pumping the command, leaving it in flight.
 	for _, r := range "on kitchen" {
-		m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
+		m.Update(tea.KeyPressMsg{Code: r, Text: string(r)})
 	}
-	next, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	next, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	m = next.(*Model)
 	if cmd == nil {
 		t.Fatal("submitting should hand the command off to the runtime")
@@ -296,7 +296,7 @@ func TestSlowCommandDoesNotBlockTheInterface(t *testing.T) {
 
 	// The operator can keep typing while it runs.
 	for _, r := range "list" {
-		next, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
+		next, _ = m.Update(tea.KeyPressMsg{Code: r, Text: string(r)})
 		m = next.(*Model)
 	}
 	if m.input.Value() != "list" {
@@ -307,7 +307,7 @@ func TestSlowCommandDoesNotBlockTheInterface(t *testing.T) {
 	bus.Publish(events.Event{At: time.Now(), Kind: events.Connected, Name: "kitchen"})
 	next, _ = m.Update(eventMsg(events.Event{At: time.Now(), Kind: events.Connected, Name: "kitchen"}))
 	m = next.(*Model)
-	if !strings.Contains(m.View(), "connected") {
+	if !strings.Contains(m.View().Content, "connected") {
 		t.Error("the feed stopped updating while a command was in flight")
 	}
 
@@ -317,7 +317,7 @@ func TestSlowCommandDoesNotBlockTheInterface(t *testing.T) {
 	if m.inFlight != 0 {
 		t.Errorf("inFlight = %d after the result, want 0", m.inFlight)
 	}
-	if !strings.Contains(m.View(), "boom") {
+	if !strings.Contains(m.View().Content, "boom") {
 		t.Error("the result should reach the feed")
 	}
 }

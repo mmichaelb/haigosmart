@@ -7,8 +7,8 @@ import (
 	"context"
 	"strings"
 
-	"github.com/charmbracelet/bubbles/textinput"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/textinput"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/mmichaelb/haigosmart/internal/control"
 	"github.com/mmichaelb/haigosmart/internal/events"
@@ -100,7 +100,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width, m.height = msg.Width, msg.Height
-		m.input.Width = max(msg.Width-4, 1)
+		m.input.SetWidth(max(msg.Width-4, 1))
 		m.feed.resize(m.visibleFeedLines())
 		return m, nil
 
@@ -118,7 +118,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		return m.handleKey(msg)
 	}
 	var cmd tea.Cmd
@@ -126,12 +126,12 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m *Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch msg.Type {
-	case tea.KeyCtrlC, tea.KeyEsc:
+func (m *Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "ctrl+c", "esc":
 		return m.quit()
 
-	case tea.KeyEnter:
+	case "enter":
 		line := strings.TrimSpace(m.input.Value())
 		m.input.SetValue("")
 		if line == "" {
@@ -143,16 +143,16 @@ func (m *Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.inFlight++
 		return m, runCommand(m.ctrl, line)
 
-	case tea.KeyUp:
+	case "up":
 		m.recall(1)
 		return m, nil
-	case tea.KeyDown:
+	case "down":
 		m.recall(-1)
 		return m, nil
-	case tea.KeyPgUp:
+	case "pgup":
 		m.feed.scroll(-m.visibleFeedLines() / 2)
 		return m, nil
-	case tea.KeyPgDown:
+	case "pgdown":
 		m.feed.scroll(m.visibleFeedLines() / 2)
 		return m, nil
 	}
