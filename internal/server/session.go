@@ -55,7 +55,14 @@ type session struct {
 // DeviceID implements bulb.Driver.
 func (s *session) DeviceID() string { return s.identity.DeviceID() }
 
-// Close implements bulb.Driver.
+// Close implements bulb.Driver. It closes with a hard reset (RST) rather
+// than a graceful FIN, on every call site — shutdown (session.go's
+// context.AfterFunc) and same-device takeover alike. A power cut is a hard
+// reset, and that is the one disconnect shape this firmware is known to
+// recover from without a manual power-cycle; a graceful close is not (see
+// specs/006-bulb-reconnect-restart/contracts/shutdown-close-behavior.md).
+// The takeover call site closes an already-abandoned socket, so the reset
+// vs. FIN distinction is harmless there — not worth a flag to suppress it.
 func (s *session) Close() error {
 	s.mu.Lock()
 	if s.closed {
@@ -64,7 +71,23 @@ func (s *session) Close() error {
 	}
 	s.closed = true
 	s.mu.Unlock()
+	setLinger(s.conn)
 	return s.conn.Close()
+}
+
+// setLinger forces the next Close on conn to send a TCP reset (RST) instead
+// of a graceful FIN. It unwraps a TLS connection to reach the underlying TCP
+// socket, since bulbs on the LAN arrive both in cleartext and over TLS on the
+// same port (see sniff in tls.go). Any other net.Conn (fakebulb's test
+// double, a future non-TCP transport) is left alone.
+func setLinger(conn net.Conn) {
+	type netConner interface{ NetConn() net.Conn }
+	if nc, ok := conn.(netConner); ok {
+		conn = nc.NetConn()
+	}
+	if tc, ok := conn.(*net.TCPConn); ok {
+		_ = tc.SetLinger(0)
+	}
 }
 
 // Apply implements bulb.Driver: it moves the bulb to the wanted state and
