@@ -307,6 +307,14 @@ Shutdown is fast enough that it never gets that far.
 with status 0. A command in flight is abandoned — the lamp keeps whatever state
 it reached, and you are never told a command succeeded that did not.
 
+Each lamp's connection is closed with a hard reset (TCP `RST`) rather than a
+graceful close, on the theory that a bulb recovers from an abrupt connection
+loss the same way it recovers from a power cut — without needing to be
+manually power-cycled after a restart. Whether a given bulb's firmware
+actually reconnects on its own is not guaranteed by this server; watch the
+event feed for a `discovered`/`connected` entry following the
+`disconnected (server shutting down)` one to confirm it for your hardware.
+
 ---
 
 ## Home Assistant
