@@ -48,6 +48,8 @@
     "gomodTidy"
   ],
   "lockFileMaintenance": {
-    "enabled": true
-  }
+    "enabled": true,
+    "automerge": true
+  },
+  "transitiveRemediation": true
 }
