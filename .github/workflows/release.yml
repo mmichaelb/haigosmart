@@ -4,6 +4,12 @@ on:
   push:
     branches: [main]
 
+  # Dependency bumps (`fix(deps)` commits from Renovate) do not release on their
+  # own; this run collects everything merged since the last tag into one release.
+  # Security fixes (`fix(security)`) and human feat/fix commits release on push.
+  schedule:
+    - cron: '0 6 * * 1'
+
   # Recovery path. A release that failed after its tag was created cannot be
   # retried by re-running the push workflow: semantic-release sees the tag as the
   # latest release with nothing newer to release, so it never reaches the publish
@@ -42,6 +48,9 @@ permissions:
 
 jobs:
   release:
+    if: >-
+      github.event_name != 'push' ||
+      !startsWith(github.event.head_commit.message, 'fix(deps)')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -83,7 +92,7 @@ jobs:
         run: npm ci
 
       - name: release
-        if: github.event_name == 'push'
+        if: github.event_name != 'workflow_dispatch'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npx semantic-release

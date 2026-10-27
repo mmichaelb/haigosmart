@@ -25,6 +25,20 @@ push to main
           → draft flag removed → the release is visible
 ```
 
+## When a release runs
+
+Renovate commits carry a conventional prefix so semantic-release can see them:
+
+| Update | Commit | Release |
+|---|---|---|
+| Go module / Dockerfile base image | `fix(deps)` | Weekly, Monday 06:00 UTC |
+| Vulnerability fix | `fix(security)` | Immediately on merge |
+| Actions, goreleaser, npm, lockfile | `chore(deps)` | Never on its own |
+| Human `feat:` / `fix:` | as written | Immediately, with any pending bumps |
+
+A push whose head commit starts with `fix(deps)` skips the job; the weekly
+schedule run releases everything accumulated since the last tag, or nothing.
+
 `semantic-release` decides the version. GoReleaser does everything else,
 including creating the GitHub release. `@semantic-release/github` is deliberately
 not installed, so exactly one tool owns the release.
