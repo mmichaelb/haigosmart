@@ -47,6 +47,5 @@
   "lockFileMaintenance": {
     "enabled": true,
     "automerge": true
-  },
-  "transitiveRemediation": true
+  }
 }
