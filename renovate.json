@@ -8,7 +8,10 @@
   "automergeStrategy": "squash",
   "vulnerabilityAlerts": {
     "enabled": true,
-    "labels": ["security"]
+    "labels": ["security"],
+    "semanticCommitType": "fix",
+    "semanticCommitScope": "security",
+    "automerge": true
   },
   "osvVulnerabilityAlerts": true,
   "packageRules": [
@@ -36,12 +39,6 @@
       ],
       "semanticCommitType": "fix",
       "semanticCommitScope": "deps"
-    },
-    {
-      "isVulnerabilityAlert": true,
-      "semanticCommitType": "fix",
-      "semanticCommitScope": "security",
-      "automerge": true
     }
   ],
   "postUpdateOptions": [
