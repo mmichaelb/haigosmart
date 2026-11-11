@@ -86,7 +86,7 @@ jobs:
       - uses: goreleaser/goreleaser-action@v7
         with:
           install-only: true
-          version: 'v2.20.0'
+          version: 'v2.20.1'
 
       - name: install release tooling
         run: npm ci
